@@ -21,3 +21,11 @@ CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 # 自定义分区表：默认单 app 只给 1MB，不够用（理由见 partitions.csv 顶部注释）
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# 日志只走 UART0：发送端只接 CH340，原生 USB 口悬空，
+# 开着 USB-Serial-JTAG 次级控制台会导致应用启动后卡住（无主机时写阻塞）
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
+# 与接收端对齐：调试优化(-Og)下启动会卡在 cpu_start，改 PERF
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_FREERTOS_HZ=1000

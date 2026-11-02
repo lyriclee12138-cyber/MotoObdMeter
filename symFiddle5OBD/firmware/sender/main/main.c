@@ -134,8 +134,18 @@ static bool sim_tick(void)
     return s_sim;
 }
 
+/* 临时诊断：1 = app_main 只打一行日志就原地待着，用来判断
+ * "app_main 到底有没有被调用"。排查完改回 0。 */
+#define SENDER_MINIMAL_BOOT 0
+
 void app_main(void)
 {
+#if SENDER_MINIMAL_BOOT
+    ESP_LOGI(TAG, ">>> 最小启动测试：app_main 已执行 <<<");
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+#endif
     ESP_LOGI(TAG, "=== Fiddle5 OBD sender (CAN / ISO 15765-4) ===");
     ESP_LOGI(TAG, "固件版本 %s（编译于 %s）", version_string(), version_build_time());
     ESP_LOGI(TAG, "接线核对: 模块3.3V->3V3 GND->GND TX->GPIO%d RX->GPIO%d CANH->OBD6 CANL->OBD14",
