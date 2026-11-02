@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三阳飞度5 OBD 数显系统 · 可行性分析</title>
+<style>
+:root{
+  --bg:#0e1014; --card:#161a21; --card2:#1c212a; --line:#2a303b;
+  --tx:#e8eaee; --tx2:#9aa3b0; --tx3:#6b7482;
+  --ok:#3ddc97; --warn:#f5a623; --bad:#ef5f5f; --info:#5aa9f5; --acc:#ff8a4c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  font-size:15px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:920px;margin:0 auto;padding:56px 28px 100px}
+header{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:44px}
+.kicker{font-size:12px;letter-spacing:.18em;color:var(--acc);text-transform:uppercase;margin-bottom:14px}
+h1{font-size:30px;font-weight:600;letter-spacing:-.01em;line-height:1.35}
+.sub{color:var(--tx2);margin-top:12px;font-size:14px}
+h2{font-size:19px;font-weight:600;margin:52px 0 18px;padding-left:13px;border-left:3px solid var(--acc);line-height:1.4}
+h3{font-size:15px;font-weight:600;margin:26px 0 10px;color:var(--tx)}
+p{margin:12px 0;color:var(--tx)}
+p.dim{color:var(--tx2)}
+strong{font-weight:600;color:#fff}
+code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:13px;background:var(--card2);padding:2px 6px;border-radius:4px;color:#ffc9a3}
+
+.verdict{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:30px 0 8px}
+.v{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 18px}
+.v .n{font-size:32px;font-weight:600;line-height:1.1;letter-spacing:-.02em}
+.v .l{font-size:12px;color:var(--tx2);margin-top:8px}
+.v .d{font-size:12px;color:var(--tx3);margin-top:4px}
+.g{color:var(--ok)} .y{color:var(--warn)} .r{color:var(--bad)}
+
+.bars{margin:18px 0}
+.bar{margin:16px 0}
+.bar .top{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:7px}
+.bar .top span:last-child{color:var(--tx2);font-variant-numeric:tabular-nums}
+.track{height:6px;background:var(--card2);border-radius:3px;overflow:hidden}
+.fill{height:100%;border-radius:3px}
+
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:13.5px}
+th{text-align:left;font-weight:500;color:var(--tx2);font-size:12px;letter-spacing:.06em;
+   padding:9px 12px;border-bottom:1px solid var(--line);background:var(--card2)}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.015)}
+td.mono{font-family:ui-monospace,monospace;font-size:12.5px;color:#ffc9a3}
+
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap;font-weight:500}
+.t-ok{background:rgba(61,220,151,.13);color:var(--ok)}
+.t-warn{background:rgba(245,166,35,.13);color:var(--warn)}
+.t-bad{background:rgba(239,95,95,.13);color:var(--bad)}
+.t-info{background:rgba(90,169,245,.13);color:var(--info)}
+
+.note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--acc);
+      border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0}
+.note.danger{border-left-color:var(--bad)}
+.note.good{border-left-color:var(--ok)}
+.note .h{font-size:13px;font-weight:600;margin-bottom:6px;color:#fff}
+.note p{margin:6px 0;font-size:13.5px;color:var(--tx2)}
+.note p strong{color:var(--tx)}
+
+ol,ul{margin:12px 0 12px 4px;padding-left:22px;color:var(--tx2)}
+li{margin:8px 0}
+li strong{color:var(--tx)}
+
+.step{display:grid;grid-template-columns:56px 1fr;gap:16px;margin:20px 0;
+      background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.step .no{font-size:24px;font-weight:600;color:var(--acc);opacity:.55;line-height:1.2}
+.step h4{font-size:14.5px;font-weight:600;margin-bottom:6px}
+.step p{font-size:13px;color:var(--tx2);margin:4px 0}
+.step .pass{font-size:12px;color:var(--ok);margin-top:8px}
+
+footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);
+       font-size:12px;color:var(--tx3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:640px){
+  .verdict{grid-template-columns:1fr}
+  h1{font-size:23px}
+  .wrap{padding:36px 18px 70px}
+  table{font-size:12.5px}
+  td,th{padding:8px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Feasibility Review</div>
+  <h1>三阳飞度5 · OBD 骑行数据圆屏显示系统</h1>
+  <p class="sub">硬件基线：Waveshare ESP32-S3-Touch-AMOLED-1.75C（圆屏，接收端）＋ ESP32-S3 N16R8 开发板（发送端）。OBD 侧设备待选型。</p>
+</header>
+
+<div class="verdict">
+  <div class="v"><div class="n g">95%</div><div class="l">圆屏显示链路</div><div class="d">LVGL 9 + 8MB PSRAM，成熟</div></div>
+  <div class="v"><div class="n g">98%</div><div class="l">两板无线链路</div><div class="d">ESP-NOW，延迟 10ms 级</div></div>
+  <div class="v"><div class="n g">85%</div><div class="l">OBD 取数链路</div><div class="d">已实测 CAN 500 kbaud</div></div>
+</div>
+
+<h2>一、一句话结论</h2>
+
+<p>这个项目<strong>能做</strong>，而且随着诊断口照片的确认，比初版的估计要乐观。照片里那个宽扁的红色接口<strong>不像三阳私有的 3 针，而是 OBD-II 体系的标准口</strong>；更关键的是，上面正插着一个蓝色蓝牙诊断头（外形就是 ELM327 mini），说明这车接受标准 OBD 设备。</p>
+
+<p class="dim">这意味着路线要重排：如果诊断口走 <strong>CAN</strong>，ESP32-S3 自带 TWAI 控制器，配一颗 SN65HVD230（¥8）就能直连，用标准 OBD PID 读转速、水温，几乎不需要逆向私有协议；如果走 <strong>K 线</strong>，才需要 L9637D。（实测车速 ECU 不提供；里程由标准 PID <code>0x31</code> 得到近似值，详见第五节。）ELM327 也不该完全排除——它当「侦察兵」只要 ¥30，是确认协议最快最便宜的手段。</p>
+
+<h2>二、分段可行性评分</h2>
+
+<div class="bars">
+  <div class="bar">
+    <div class="top"><span>圆屏 LVGL 界面（466×466 圆形布局）</span><span>95%</span></div>
+    <div class="track"><div class="fill" style="width:95%;background:var(--ok)"></div></div>
+  </div>
+  <div class="bar">
+    <div class="top"><span>ESP-NOW 无线传输（发送端 → 接收端）</span><span>98%</span></div>
+    <div class="track"><div class="fill" style="width:98%;background:var(--ok)"></div></div>
+  </div>
+  <div class="bar">
+    <div class="top"><span>K 线物理层（12V 单线 → 3.3V TTL）</span><span>90%</span></div>
+    <div class="track"><div class="fill" style="width:90%;background:var(--ok)"></div></div>
+  </div>
+  <div class="bar">
+    <div class="top"><span>KWP2000 协议对接（含私有服务号逆向）</span><span>60%</span></div>
+    <div class="track"><div class="fill" style="width:2%;background:var(--bad)"></div></div>
+  </div>
+  <div class="bar">
+    <div class="top"><span>从 ECU 拿到「车速」</span><span>0%</span></div>
+    <div class="track"><div class="fill" style="width:2%;background:var(--bad)"></div></div>
+  </div>
+  <div class="bar">
+    <div class="top"><span>从 ECU 拿到「总里程」</span><span>60%</span></div>
+    <div class="track"><div class="fill" style="width:60%;background:var(--warn)"></div></div>
+  </div>
+  <div class="bar">
+    <div class="top"><span>整车长期可靠性（供电 / 防水 / 抗振）</span><span>75%</span></div>
+    <div class="track"><div class="fill" style="width:75%;background:var(--warn)"></div></div>
+  </div>
+</div>
+
+<div class="note">
+  <div class="h">结论性判断</div>
+  <p>转速、水温：<strong>走标准 OBD，成功率高</strong>（PID 0x0C / 0x05，OBD-II 必选支持项）。</p>
+  <p>车速：<strong>已实测不可用</strong>（2026-10-31，PID 0x0D 无响应）。转动前轮时原车仪表有反应、手机端无数据，说明<strong>轮速信号直连仪表、不进 ECU</strong>。本项目<strong>放弃车速</strong>，也不做轮速传感器旁路。</p>
+  <p>总里程：<strong>已找到替代源</strong>（2026-10-31 晚实测）。标准 PID <code>0x31</code>「清码后行驶距离」返回 <strong>11582 km</strong>，与表显里程同一量级，可直接当里程用。它不是真正的总里程表，清故障码会归零——发送端用 offset 补偿把归零的差额补回去，显示值保证只增不减。</p>
+</div>
+
+<h2>三、ELM327 的边界：能当侦察兵，不能当发送端</h2>
+
+<p>把它当成<strong>成品发送端</strong>，有三个结构性障碍，任何一个都足以卡死；但把它当成<strong>一次性的侦察工具</strong>，这三个障碍全都不成立。</p>
+
+<h3>硬伤 1 · ESP32-S3 没有经典蓝牙</h3>
+<p>市面上 90% 的 ELM327 是蓝牙 <strong>SPP</strong>（串口透传，基于 HC-05/06 或类似芯片）。而 ESP32-S3 <strong>只有 BLE 5.0，没有 Classic Bluetooth</strong>。这意味着你的发送端<strong>根本发现不了也连不上</strong>这类适配器。能用的只有 BLE 版 ELM327（通常是 CC2541 方案），而这批货普遍存在连接掉线、指令超时、固件阉割的问题，做实时数据流几乎不可用。</p>
+
+<h3>硬伤 2 · 接口形态各家不一（现已基本确认为 OBD-II 标准口）</h3>
+<p>三阳在诊断接口上并不统一，市面上同时流通 <strong>3 针、4 针、6 针</strong>三种「三阳专用线」。常见的三针口只引出 <strong>K 线 + 地</strong>，通常<strong>不带 12V 常电</strong>。</p>
+
+<div class="note good">
+  <div class="h">实车照片判定（2026-10-30 更新）</div>
+  <p>用户提供的同款车照片显示：诊断口在<strong>坐桶后、电池上方</strong>，是一个宽扁的红色接口，上面已经插着一个蓝色蓝牙诊断头。由此可以确定两件事——</p>
+  <p>① <strong>不是 3 针</strong>。三针口直径只有约 10 mm，和照片里这个宽口完全不在一个量级。</p>
+  <p>② <strong>属于 OBD-II 体系</strong>。那个蓝色头子的外形就是 ELM327 mini，而 ELM327 只做 16 针，它能插进去，说明车上这个口是 16 针 OBD-II（或至少是同族的国四标准口）。</p>
+  <p>③ <strong>协议已实测确认（2026-10-31）</strong>：ELM327 插上后 Car Scanner 报 <code>ISO 15765-4 CAN (11 bit ID, 500 kbaud)</code>，ECU 名 <code>ECM-EngineControl</code>，ELM 与 ECU 均显示「已连接」。<strong>这是一块标准的 CAN 车，K 线方案整条作废</strong>，前端改用 SN65HVD230，协议走 ISO 15765-4。</p>
+</div>
+
+<div class="note danger">
+  <div class="h">关于「3 针」这个说法的修正</div>
+  <p>本报告初版把飞度 5 的诊断口直接写成「3 针 Euro4」，这是<strong>从三阳车系的通用转接线反推的，并不是飞度 5 的实证</strong>。可查到的公开资料只能证明三阳旗下<strong>同时存在</strong>多种接口，无法证明飞度 5 具体是哪一种。这一项必须在车上实地确认，见下表。</p>
+</div>
+
+<table>
+  <tr><th style="width:14%">接口</th><th style="width:26%">可见范围</th><th style="width:22%">协议</th><th>说明</th></tr>
+  <tr><td><strong>3 针</strong></td><td>SYM 欧四踏板车。OBDSTAR M024、Autroniq AC015、多家转接线厂都有「SYM 3-pin」产品</td><td>K-Line</td><td>最常被引用的形态，但只能证明「有这种车」，不能证明「飞度 5 是这种」</td></tr>
+  <tr><td><strong>4 针</strong></td><td>部分 SYM 车型。有厂家同时卖「SYM 3pin-4pin」二合一线，说明两种并存</td><td>K-Line</td><td>方形四针，多见于排量稍大的车型</td></tr>
+  <tr><td><strong>6 针（红色）</strong></td><td>台湾三阳常见；也是<strong>国四 / 欧五标准接口</strong>的统一形态</td><td>K-Line 或 CAN</td><td>位置多在电瓶旁或坐垫下。飞度 5 是国四中国版，落在这个形态的概率不低</td></tr>
+  <tr><td><strong>16 针 OBD 型</strong></td><td>2017 年后的部分欧四车型（如 Texa AP05 线覆盖的 SYM 车款）</td><td>K-Line / CAN</td><td>若飞度 5 是这种，直接用现成 OBD 设备即可，整个方案都会简化</td></tr>
+</table>
+
+<h3>硬伤 3 · ELM327 的固件只认 OBD-II 标准服务</h3>
+<p>ELM327 的核心能力是自动握手 + 把 OBD-II 的标准 PID（服务 0x01–0x0A）翻译成 ASCII。但摩托 ECU（飞度 5 这一级别大概率是 <strong>Delphi MT05.x</strong>）的实时数据<strong>多数走 KWP2000 的私有服务 0x21（readDataByLocalIdentifier）</strong>，返回的是厂商自定义的数据块。ELM327 拿到这种响应不知道该怎么解析，也不会主动去请求它。</p>
+
+<div class="note danger">
+  <div class="h">结论</div>
+  <p>如果一定要用 ELM327，它只能被当成一个「<strong>笨的物理层转接盒</strong>」（设 <code>ATSP4</code> 锁 ISO 14230，手动发裸十六进制帧）。既然都要自己拼帧、自己解析，那还不如直接上 K 线前端——<strong>成本低一个数量级（¥10 vs ¥100+），延迟还更低</strong>。</p>
+</div>
+
+<h3>怎么在 10 分钟内确定（不用买任何东西）</h3>
+<ol>
+  <li><strong>掀座桶、拆电瓶盖板、看右侧盖板内侧</strong>，找一个带防尘帽、没插东西的插头。数针脚数、记颜色、拍照。</li>
+  <li><strong>看 ECU 本体上的标签</strong>。ECU 一般也在座桶附近，标签上印着供应商和型号（Keihin / Delphi / Bosch / 联合电子 / 京滨）。<strong>这个决定了协议，比接口形态更关键。</strong></li>
+  <li><strong>把两张照片发给淘宝卖「摩托车 OBD 转接线」的卖家</strong>，问「我这车配哪根线、能不能读实时数据」。他们天天处理这个问题，成本为零，比任何资料都快。</li>
+  <li>同理也可以直接问三阳售后，或翻车辆说明书里关于 OBD 故障灯的章节。</li>
+</ol>
+
+
+<h2>四、OBD 侧设备选型对比</h2>
+
+<table>
+  <tr><th style="width:26%">方案</th><th style="width:14%">成本</th><th>评价</th></tr>
+  <tr>
+    <td><strong>A. ELM327 蓝牙 SPP</strong><br><span class="tag t-info">仅侦察</span></td>
+    <td>¥30–80</td>
+    <td>S3 无经典蓝牙，物理上连不上，<strong>不能当发送端</strong>。但诊断口已确认是 OBD-II，它插上手机就能直接报出协议名和 PID 清单——<strong>当侦察工具是最划算的</strong>。</td>
+  </tr>
+  <tr>
+    <td><strong>B. ELM327 WiFi 版</strong><br><span class="tag t-warn">勉强</span></td>
+    <td>¥90–150</td>
+    <td>技术上能做（S3 当 TCP client 连它的 AP），但握手 2–5 秒、单次查询 100–300 ms，做「实时转速」体验很差；还占掉 WiFi 射频，和 ESP-NOW 抢信道。不推荐。</td>
+  </tr>
+  <tr>
+    <td><strong>C. ELM327 USB + S3 USB Host</strong><br><span class="tag t-bad">不推荐</span></td>
+    <td>¥50–90</td>
+    <td>需要跑 USB Host + CDC-ACM 驱动，工程量大；协议限制同硬伤 3。投入产出比最差。</td>
+  </tr>
+  <tr>
+    <td><strong>D. KKL VAG 409.1 线（拆解复用）</strong><br><span class="tag t-info">过渡方案</span></td>
+    <td>¥35–60</td>
+    <td>这是国内外改 MT05 圈子的<strong>事实标准</strong>（FT232RL + K 线收发器，配 ScanST 读实时数据）。但它是 USB 输出，要接 S3 得拆掉 FT232 直接从 K 线收发器取 TTL，属于「为了省 20 块多干两小时」。<strong>价值在于：先用它验证车上有数据。</strong></td>
+  </tr>
+  <tr>
+    <td><strong>E. 自建 K 线前端</strong><br><span class="tag t-ok">推荐</span></td>
+    <td>¥10–25</td>
+    <td>一颗 <code>L9637D</code>（或 MC33660 / Si9241），把 12V 单线半双工 K 线转成 3.3V TTL 串口，直接进 S3 的 UART。协议自己实现 KWP2000，<strong>延迟可压到 30–50 ms，完全可控</strong>。这是最终形态。</td>
+  </tr>
+  <tr>
+    <td><strong>F. KKL 409.1 线 + 免费软件</strong><br><span class="tag t-ok">侦察首选</span></td>
+    <td>¥35–60</td>
+    <td>配合 ScanST 或 TunerPro 读 Delphi MT05 的实时数据，是改车圈子的通用做法。<strong>不需要买解码仪</strong>，前提是 ECU 确实是 MT05。更省钱的办法见第七节。</td>
+  </tr>
+</table>
+
+<h2>五、数据可得性矩阵</h2>
+
+<p class="dim">下表是这类小排量电喷踏板车的普遍情况，<strong>不是这台车的实测结果</strong>。飞度 5 的具体表现必须实测确认，这也是我把「侦察」放在阶段 0 的原因。</p>
+
+<h3>实车 PID 实测清单（2026-10-31，ELM327 + Car Scanner）</h3>
+<p>这台车支持的 PID 比预期完整得多——<strong>该车自报符合 EOBD (Europe) 标准</strong>，国四车型对标欧四/欧五，标准 PID 基本齐全。下面是从 App「所有传感器」页逐条抄下来的实际读数，以及在本工程里的用途。</p>
+
+<table>
+  <tr><th style="width:22%">数据项</th><th style="width:9%">PID</th><th style="width:18%">实车读数</th><th>本工程用途</th></tr>
+  <tr><td><strong>发动机转速</strong></td><td class="mono">0x0C</td><td class="mono">1924 rpm</td><td><strong>主显示</strong>，轮询 40 ms</td></tr>
+  <tr><td><strong>冷却液温度</strong></td><td class="mono">0x05</td><td class="mono">39–40 °C</td><td><strong>主显示</strong>，轮询 1 s</td></tr>
+  <tr><td><strong>清码后行驶距离</strong></td><td class="mono">0x31</td><td class="mono">11582 km</td><td><strong>里程主源</strong>，轮询 5 s</td></tr>
+  <tr><td>节气门位置</td><td class="mono">0x11</td><td class="mono">11.76 %</td><td>次显示，轮询 200 ms</td></tr>
+  <tr><td>进气温度</td><td class="mono">0x0F</td><td class="mono">24 °C</td><td>次显示，轮询 2 s</td></tr>
+  <tr><td>进气歧管绝对压力</td><td class="mono">0x0B</td><td class="mono">44 kPa</td><td>已实现解码，暂不上界面</td></tr>
+  <tr><td>计算负荷</td><td class="mono">0x04</td><td class="mono">32.94 %</td><td>已实现解码，暂不上界面</td></tr>
+  <tr><td>点火提前角</td><td class="mono">0x0E</td><td class="mono">10°</td><td>已实现解码，暂不上界面</td></tr>
+  <tr><td>短期 / 长期燃油修正</td><td class="mono">0x06 / 0x07</td><td class="mono">−19.53 % / −3.91 %</td><td>诊断参考</td></tr>
+  <tr><td>氧传感器电压</td><td class="mono">0x14</td><td class="mono">0.75 V</td><td>诊断参考</td></tr>
+  <tr><td>空气流量</td><td class="mono">0x10</td><td class="mono">0.83 g/s</td><td>诊断参考</td></tr>
+  <tr><td>ECU 本次运行秒数</td><td class="mono">0x1F</td><td class="mono">0:02:18</td><td>可与自建运行计时交叉校验</td></tr>
+  <tr><td>大气压</td><td class="mono">0x33</td><td class="mono">101 kPa</td><td>—</td></tr>
+  <tr><td>燃油系统状态</td><td class="mono">0x03</td><td class="mono">闭环（冷车时 2 号开环）</td><td>—</td></tr>
+  <tr><td>车速</td><td class="mono">0x0D</td><td class="mono"><strong>恒 0 km/h</strong></td><td><strong>不用</strong>——见下方说明</td></tr>
+  <tr><td>油箱液位</td><td class="mono">0x2F</td><td class="mono">未列出</td><td>不支持，踏板车多为浮子直连仪表</td></tr>
+  <tr><td>控制模块电压</td><td class="mono">0x42</td><td class="mono">未列出</td><td>不支持。App 上的「OBD 模块电压 14 V」是 <strong>ELM327 自己测的</strong>，不是 ECU 数据</td></tr>
+</table>
+
+<div class="note warn">
+  <div class="h">两条容易误读的数据</div>
+  <p><strong>车速 0x0D 显示 0 km/h，但它不是「不支持」。</strong>App 没写「无数据」，说明 ECU 会应答这个 PID，只是返回值恒为 0——轮速信号确实没进 ECU。所以 <code>obd_poll</code> 不轮询它：读到的 0 不能显示，显示 0 km/h 会让骑手误判为停车。</p>
+  <p><strong>0x42 模块电压缺失，意味着「电压」这一栏没有 ECU 数据源。</strong>如果要显示电压，得在硬件上从 12V 输入分压进 ADC 自己测（一个 100k/22k 分压 + 一颗 100nF 即可），或者干脆省掉这一栏。当前固件保留轮询，读不到会自动停掉。</p>
+</div>
+
+<h3>逐项可得性判断</h3>
+<table>
+  <tr><th style="width:16%">数据项</th><th style="width:20%">最可能的来源</th><th style="width:12%">可得性</th><th>说明</th></tr>
+  <tr>
+    <td><strong>发动机转速</strong></td>
+    <td>ECU 实时数据块</td>
+    <td><span class="tag t-ok">85%</span></td>
+    <td>电喷系统必读参数，几乎一定在实时数据里。刷新 10–20 Hz 足够画指针动画。</td>
+  </tr>
+  <tr>
+    <td><strong>冷却液温度</strong></td>
+    <td>ECU 实时数据块</td>
+    <td><span class="tag t-ok">85%</span></td>
+    <td>飞度 5 是水冷机，ECU 必须读 ECT 做喷油修正，数据一定存在。变化慢，1 Hz 就够。</td>
+  </tr>
+  <tr>
+    <td><strong>车速</strong></td>
+    <td>轮速传感器 → 仪表<br>（未必进 ECU）</td>
+    <td><span class="tag t-bad">0%</span></td>
+    <td><strong>已实测排除</strong>：PID 0x0D <strong>有应答但恒返 0</strong>（App 显示 0 km/h，而非「无数据」）。转前轮时原车仪表动、手机不动，确认轮速信号直连仪表、未接入 ECU。显示 0 会误导，故不用。</td>
+  </tr>
+  <tr>
+    <td><strong>总里程</strong></td>
+    <td>仪表 MCU 的 EEPROM</td>
+    <td><span class="tag t-ok">60%</span></td>
+    <td><strong>已实测可读</strong>：PID <code>0x31</code> 返回 11582 km。这不是总里程表，而是「清码后行驶距离」——但只要不清码，它就等于里程，对保养提醒够用。<strong>清码会归零</strong>，发送端已做补偿。</td>
+  </tr>
+  <tr>
+    <td><strong>电瓶电压</strong></td>
+    <td>ECU / 自己分压采样</td>
+    <td><span class="tag t-ok">99%</span></td>
+    <td>自己用电阻分压 + ADC 测最省事，不占协议带宽。</td>
+  </tr>
+  <tr>
+    <td><strong>节气门开度 / 进气压力</strong></td>
+    <td>ECU 实时数据块</td>
+    <td><span class="tag t-ok">75%</span></td>
+    <td>顺手就能显示，适合做「骑行状态」的辅助信息。</td>
+  </tr>
+</table>
+
+<div class="note good">
+  <div class="h">关键设计取舍（已按实测修正）</div>
+  <p>本节初版主张「总里程自己攒」。但实测车速不可用之后，这个方案<strong>失去了数据来源</strong>——没有速度就积不出里程。</p>
+  <p>后来的实测救回了这一项：标准 PID <code>0x31</code>「清码后行驶距离」返回 <strong>11582 km</strong>。虽然它的名字是「自清码起」，但只要不清码，这个数就一直累计，实际等价于里程。</p>
+  <p>它有唯一一个坑：<strong>清故障码会让它归零</strong>。如果直接透传，某天清了码，里程就从 11582 跳成 1，比不显示更糟。所以发送端加了一层补偿：检测到显著回落时把差额记进 offset，显示值继续单调上升（细节见 <code>odo.c</code>）。</p>
+  <p>同时保留<strong>发动机运行时长</strong>作为第二基准。运行小时数在工程机械和商用车上本来就是标准的保养依据——机油劣化看的是运转时间与热循环次数，跟走了多少公里关系没那么大。而且它<strong>熄火不积分</strong>，推车挪车完全不影响。</p>
+</div>
+
+<h2>六、推荐架构与物料清单</h2>
+
+<h3>硬件拓扑</h3>
+<p>发送端装在座桶里、靠近 ECU 和诊断口（走线短、远离水和震动）；圆屏装在车把。两者相距 1–2 米，中间隔一两层塑料壳——ESP-NOW 在这个距离上是压倒性余量。</p>
+
+<table>
+  <tr><th style="width:30%">物料</th><th style="width:34%">规格要点</th><th style="width:10%">数量</th><th style="width:12%">参考价</th><th>备注</th></tr>
+  <tr><td>圆屏开发套件</td><td>ESP32-S3-Touch-AMOLED-1.75C</td><td>1</td><td class="mono">已有</td><td>CO5300 QSPI / 466×466 / 700 nit</td></tr>
+  <tr><td>ESP32-S3 开发板</td><td>N16R8</td><td>1</td><td class="mono">已有</td><td>发送端</td></tr>
+  <tr><td><strong>诊断口转接线</strong></td><td>若确为 16 针 OBD-II 则<strong>不需要</strong></td><td>0–1</td><td class="mono">¥0–60</td><td>按照片判断大概率可免</td></tr>
+  <tr><td><strong>总线收发器</strong></td><td>CAN 用 SN65HVD230 模块；K 线用 L9637D</td><td>1–2</td><td class="mono">¥8–25</td><td>二选一，先测协议再买</td></tr>
+  <tr><td><strong>OBD-II 16 针公头带尾线</strong></td><td>标准 J1962 公头 + 30 cm 彩色尾线，可选 90° 弯头</td><td>1</td><td class="mono">¥15–25</td><td>替代杜邦线，必需</td></tr>
+  <tr><td><strong>OBD 一分二 Y 线</strong></td><td>调试期同时挂 ELM327 对照</td><td>1</td><td class="mono">¥20</td><td>可选，强烈建议</td></tr>
+  <tr><td><strong>USB-CAN 分析仪</strong></td><td>candleLight 固件，Linux 免驱</td><td>1</td><td class="mono">¥40</td><td>可选，直接抓原始帧</td></tr>
+  <tr><td><strong>120Ω 电阻</strong></td><td>1/4 W</td><td>2</td><td class="mono">¥1</td><td>一般不加</td></tr>
+  <tr><td><strong>车规降压模块</strong></td><td>9–36V 输入 → 5V 3A，带防水壳</td><td>2</td><td class="mono">¥15–30</td><td><strong>CAN 也省不掉</strong>；别用 LM2596</td></tr>
+  <tr><td>保险丝座 + 保险</td><td>2A  blade</td><td>2</td><td class="mono">¥5</td><td>必须加，从电瓶正极取电</td></tr>
+  <tr><td>TVS / 自恢复保险</td><td>SMBJ18A 之类</td><td>2</td><td class="mono">¥5</td><td>抑制负载突降尖峰</td></tr>
+  <tr><td>防水接头、热缩、灌封胶</td><td>—</td><td>—</td><td class="mono">¥20</td><td>座桶里也会进水</td></tr>
+  <tr><td>逻辑分析仪（可选）</td><td>24MHz 8 通道</td><td>1</td><td class="mono">¥30–50</td><td>抓 K 线波形必备</td></tr>
+</table>
+
+<p class="dim">除两块已有开发板外，新增成本约 <strong>¥100–150</strong>。这个数字远低于买一个 ELM327 再加一堆转接折腾。</p>
+
+<h2>七、接线细节与三个最容易翻车的工程点</h2>
+
+<h3>CAN 方案接线（SN65HVD230）</h3>
+<p>如果实测是 CAN，这条路线比 K 线简单得多——<strong>ESP32-S3 自带 TWAI 控制器</strong>，外部只需要一颗收发器把 3.3V 逻辑电平变成差分总线电平，协议层交给 <code>esp_twai</code> 驱动。</p>
+
+<table>
+  <tr><th style="width:8%">脚位</th><th style="width:10%">名称</th><th style="width:26%">作用</th><th>接到哪里</th></tr>
+  <tr><td class="mono">1</td><td>D</td><td>发送数据输入</td><td><strong>ESP32 TWAI TX</strong>（示例 GPIO4）</td></tr>
+  <tr><td class="mono">2</td><td>GND</td><td>地</td><td>与 OBD 的 4/5 脚共地</td></tr>
+  <tr><td class="mono">3</td><td>VCC</td><td>3.3V 供电</td><td><strong>3.3V</strong>（这颗就是 3.3V 器件，不需要电平转换）</td></tr>
+  <tr><td class="mono">4</td><td>RXD</td><td>接收数据输出</td><td><strong>ESP32 TWAI RX</strong>（示例 GPIO5）</td></tr>
+  <tr><td class="mono">5</td><td>Vref</td><td>参考电压输出</td><td>悬空</td></tr>
+  <tr><td class="mono">6</td><td>CANL</td><td>差分低</td><td><strong>OBD 14 脚</strong></td></tr>
+  <tr><td class="mono">7</td><td>CANH</td><td>差分高</td><td><strong>OBD 6 脚</strong></td></tr>
+  <tr><td class="mono">8</td><td>RS</td><td>斜率/待机控制</td><td><strong>接 GND</strong>（高速模式）</td></tr>
+</table>
+
+<p class="dim"><strong>120Ω 终端电阻一般不要加。</strong>车上总线两端已经有终端，诊断节点是第三个节点，再加一只会让负载偏重、幅值下降。只有通信不稳时才试加一只（CANH–CANL 之间）。</p>
+<p class="dim">买<strong>模块</strong>不要买裸片：SOIC-8 手焊痛苦，成品模块带端子和终端电阻跳线，¥8–15。<strong>认准 3.3V 版本</strong>——TJA1050 是 5V 的，会把 5V 灌进 ESP32 引脚；MCP2515 是 SPI 转 CAN 控制器，而 S3 自带 TWAI，属于多此一举。</p>
+
+<h3>怎么接到车上：别用杜邦线直插</h3>
+<p>OBD 母座的端子是 1.5 mm 级别的车规端子，杜邦线 0.64 mm 方针插进去接触面积极小。摩托车震动下有两个后果：接触不良导致通信断续；或者针脚滑位<strong>短路到相邻的 16 脚常电</strong>。</p>
+<p>正确做法是买一根 <strong>OBD-II 16 针公头带尾线</strong>：一头是标准公头插进车上母座（靠原厂卡扣锁住），另一头是彩色尾线，你把要用的 4 根剪出来接，其余剪掉热缩封口。</p>
+<ul>
+  <li>插拔可靠，不会震松；线可以从缝隙引出；拔掉即恢复原状，不动原车线束。</li>
+  <li>垂直空间不够时买 <strong>90° 弯头</strong>版本，能省 3–4 cm。</li>
+  <li>调试期加一根 <strong>OBD 一分二 Y 线</strong>，可以同时插 ELM327 和你的板子对照读数——CAN 是多节点总线，多挂一个设备不会有问题。</li>
+</ul>
+
+<h3>走线、布置与取电</h3>
+<p>收发器模块只有 20×30 mm，可以和插头绑在一起塞在电池旁的空隙；<strong>ESP32-S3 开发板体积较大（带 USB 座和排针），建议放进坐桶储物箱</strong>，用约 1 m 的四芯线连过去（CANH / CANL / GND / 电源）。CANH 与 CANL 务必<strong>双绞</strong>，线束沿原车线走、每 15 cm 一个扎带。</p>
+<div class="note danger">
+  <div class="h">不要从 16 脚取常电</div>
+  <p>16 脚是电瓶常电，一直有电。板子常驻约 0.6 W，一块 7 Ah 电瓶不到一周就被耗干。要么改接 <strong>ACC 开关电</strong>（钥匙拧到 ON 才有电，推荐），要么从 16 脚取电但固件里做<strong>深度睡眠 + CAN 活动唤醒</strong>。</p>
+</div>
+
+<h3>K 线方案的接线（L9637D，SO-8 封装）</h3>
+<p>这颗芯片只做<strong>电平转换和总线驱动</strong>，不做任何协议处理——KWP2000 的握手、校验、解析全部由 ESP32 固件完成。功能上它相当于「K 线版的 RS-232 收发器」。</p>
+
+<table>
+  <tr><th style="width:8%">脚位</th><th style="width:10%">名称</th><th style="width:26%">作用</th><th>接到哪里</th></tr>
+  <tr><td class="mono">1</td><td>RX</td><td>K 线信号 → 逻辑电平输出</td><td><strong>ESP32 UART RX</strong>（如 GPIO18）</td></tr>
+  <tr><td class="mono">2</td><td>LO</td><td>L 线比较器输出</td><td>悬空（现代车无 L 线）</td></tr>
+  <tr><td class="mono">3</td><td>VCC</td><td>逻辑侧供电，3–7V</td><td><strong>3.3V</strong>（这样 RX 输出摆幅不会超过 ESP32 耐压）</td></tr>
+  <tr><td class="mono">4</td><td>TX</td><td>逻辑电平输入 → 驱动 K 线</td><td><strong>ESP32 UART TX</strong>（如 GPIO17）</td></tr>
+  <tr><td class="mono">5</td><td>GND</td><td>公共地</td><td>车身搭铁（必须与 ECU 共地）</td></tr>
+  <tr><td class="mono">6</td><td>K</td><td>双向 K 线</td><td><strong>诊断口 K 线针脚</strong></td></tr>
+  <tr><td class="mono">7</td><td>VS</td><td>总线侧供电，4.5–36V，反接保护到 −24V</td><td><strong>12V</strong>（保险丝之后）。它决定 K 线的高电平幅值</td></tr>
+  <tr><td class="mono">8</td><td>LI</td><td>L 线输入</td><td>悬空</td></tr>
+</table>
+
+<p class="dim">必接的其实只有 5 根：VCC、GND、VS、K、TX/RX。<strong>VCC 用 3.3V 而不是 5V</strong> 是关键细节——若用 5V，RX 输出会摆到 5V，直接灌进 ESP32 的 3.3V 引脚。要不就 5V 供电 + RX 上加分压。TX 空闲时必须保持高电平（芯片内部有上拉，悬空即释放总线）。</p>
+<p class="dim">买不到 L9637D 时的替代：<code>MC33660</code>（NXP，仅 5V，RX 需分压）、<code>Si9241AEY</code>。真想省事可以直接买「L9637D K 线模块」成品板，带接线端子，¥15–30。</p>
+
+<div class="note">
+  <div class="h">两条路线二选一</div>
+  <p>CAN 与 K 线的前端芯片不通用，<strong>先测协议再买</strong>，别两颗都买。判断依据只有一条：ELM327 插上手机后 App 报的协议名。</p>
+</div>
+
+<h3>1. 电源前端——宽压与尖峰保护</h3>
+<p>摩托车的 12V 系统比汽车恶劣得多：启动瞬间可能跌到 8V，稳压器失效可能冲到 16V+，还存在负载突降尖峰。<strong>必须用 9–36V 宽压输入模块 + TVS + 保险丝</strong>，不能直接拿 12V→5V 的普通模块上。</p>
+
+<div class="note warn">
+  <div class="h">换成 CAN 之后，省掉的是收发器那一颗，不是降压模块</div>
+  <p>容易混淆的地方是：<strong>SN65HVD230 是 3.3V 器件</strong>，直接吃开发板上的 3.3V 脚，确实不需要再配一路 5V→3.3V。但这一级本来就不存在——K 线方案里 L9637D 的 VCC 也是接 3.3V。</p>
+  <p>真正没变的是<strong>主供电</strong>：开发板和圆屏都是 <strong>5V 供电</strong>（Type-C 口或 5V 脚），车上只有 12V，中间必须有一颗 DC-DC。</p>
+  <p><strong>别把 12V 直接接进开发板的 VIN/5V 脚。</strong>板载 AMS1117 是线性稳压，压差 (12−3.3) V × 0.2 A ≈ <strong>1.7 W</strong> 全部变成热，SOT-223 封装几分钟就进热保护，夏天坐桶里更糟。</p>
+  <p>两块板各要一路 5V：发送端在坐桶、圆屏在车把。<strong>可以共用一颗 3A 模块再从中间分线</strong>（省一个件、省一路风险），也可以各用一颗（走线更省事，圆屏那头不用拉 12V）。</p>
+</div>
+
+<p><strong>为什么点名不要 LM2596：</strong>它输入耐压够（40V），但静态电流 5–10 mA，效率只有 70–80%，体积还大。你后面要做深度休眠省电，一颗自己就吃掉 8 mA 的模块会让休眠失去意义。选 MP1584EN、MP2338 或成品「12V/24V 转 5V 3A 防水降压模块」，静态电流在 1 mA 以内。</p>
+<p>另一个陷阱是<strong>静态耗电</strong>。开发板常驻约 120mA@5V（≈0.6W），一块 7Ah 的 12V 电瓶总共才约 84Wh——<strong>不到一周就能把电瓶耗干</strong>，第二次就打不着火。所以供电必须走 <strong>ACC 开关电</strong>（钥匙拧到 ON 才有电），或者用深度睡眠 + GPIO 唤醒。</p>
+
+<h3>2. 抗振与防水</h3>
+<p>踏板车的震动会让开发板上的 USB-C 座子、排针在一两个月内震裂——这是最常见的失效点。建议：<strong>USB 座用热熔胶或结构胶固定、排针改焊接、整板灌一层薄胶</strong>。圆屏本身有 CNC 铝壳，防水问题不大，但背面 Type-C 口要朝下或加防水盖。</p>
+
+<h3>3. 屏幕可读性与烧屏</h3>
+<p>700 cd/m² 在正午直射阳光下属于「能看见但不够爽」的水平。AMOLED 的高对比度能补一部分，但建议 UI 走<strong>深底 + 高亮大数字</strong>，不要用大面积白色背景——既抗眩光，又省电，还能显著延缓 AMOLED 烧屏。转速、水温这类静止元素要定期做像素偏移（LVGL 里有现成方案）。</p>
+
+<h2>八、分阶段实施路线</h2>
+
+<h3>侦察的四种廉价手段（解码仪不是必需品）</h3>
+<p>你需要的其实不是「一台解码仪」，而是「这台车的实时数据清单」。下面四条路从零成本到几十块，按顺序试，通常第一条就够了。</p>
+
+<table>
+  <tr><th style="width:9%">成本</th><th style="width:24%">手段</th><th>说明</th></tr>
+  <tr><td class="mono">¥30</td><td><strong>ELM327 蓝牙头 + 手机 App</strong></td><td>插上去直接告诉你<strong>协议名</strong>和支持的 PID 清单。<strong>诊断口已确认是 OBD-II 体系，这条现在是首选</strong>。只用来侦察，不当成品。</td></tr>
+  <tr><td class="mono">¥0</td><td><strong>问淘宝卖家 / 三阳售后</strong></td><td>拍诊断口 + ECU 标签两张照片发过去，问「配哪根线、能不能读实时数据」。这是性价比最高的一步，很多人卡在「查资料」上，其实问一句就完了。</td></tr>
+  <tr><td class="mono">¥0</td><td><strong>找一家有解码仪的修理店</strong></td><td>稍大的摩托修理店基本都有元征、道通之类。花二十块或买包烟，请师傅把实时数据页翻一遍拍照。比买设备快一百倍。</td></tr>
+  <tr><td class="mono">¥0</td><td><strong>仪表自诊断模式</strong></td><td>不少车的仪表支持「按住按钮 + 开钥匙」进入自检/诊断显示，能直接看到故障码甚至部分参数。翻说明书确认。</td></tr>
+  <tr><td class="mono">¥40</td><td><strong>KKL 409.1 USB 线 + ScanST</strong></td><td>改 MT05 圈子的标准工具，插笔记本就能读实时数据（转速、水温、TPS、喷油脉宽等）。<strong>前提是 ECU 确实是 Delphi MT05</strong>，所以先做第 1 步确认供应商。</td></tr>
+</table>
+
+<div class="note good">
+  <div class="h">一个可以省钱的顺序</div>
+  <p>先花 <strong>¥0</strong> 把接口形态和 ECU 型号搞清楚，再决定买什么。如果运气好碰上 6 针且走 CAN 的国四标准口，现成的 OBD 设备就能读，整个方案会简单很多；如果确认是三针 K 线口，才需要按本报告做 K 线前端。</p>
+</div>
+
+<div class="step">
+  <div class="no">00</div>
+  <div>
+    <h4>侦察：先搞清楚车上到底有什么</h4>
+    <p>诊断口位置已定位（坐桶后、电池上方）。照片判断它是 OBD-II 标准口，剩下唯一要确认的是<strong>走 CAN 还是 K 线</strong>。</p>
+    <p>最快的判定法：花 ¥30 买个最便宜的 ELM327 蓝牙头，手机装 Car Scanner 或 Torque，插上去。App 会自动握手并<strong>直接显示协议名</strong>（如 "ISO 15765-4 CAN 11bit 500kbaud" 或 "ISO 14230-4 KWP"），还能列出这台车支持的全部 PID。五分钟出结果，比任何查资料都准。</p>
+    <p class="pass">✅ 已通过（2026-10-31）：协议 = ISO 15765-4 CAN，11 bit ID，500 kbaud，ECU = ECM-EngineControl。<br>仍待补：App「所有传感器」页的 PID 支持清单，重点是 0x05 水温、0x0C 转速、0x0D 车速。</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="no">01</div>
+  <div>
+    <h4>先做显示端，用假数据把 UI 跑通</h4>
+    <p>圆屏上跑 ESP-IDF 5.5 + LVGL 9（微雪官方有 <code>esp32_s3_touch_amoled_1_75c</code> 托管组件和现成 demo）。先做圆形仪表布局、转速弧、水温条、里程数字，数据源写死或用随机数。</p>
+    <p>性能注意点：466×466 全屏缓冲约 434KB，放 PSRAM 即可；但为了 60fps，建议用<strong>局部刷新</strong>（LVGL partial buffer，约 40 行 ≈ 37KB 放内部 RAM），比全屏 DMA 流畅得多。</p>
+    <p class="pass">通过标准：圆屏独立运行 30 分钟不花屏、不掉帧，触摸可切换页面。</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="no">02</div>
+  <div>
+    <h4>打通 CAN，读出转速和水温</h4>
+    <p>焊 SN65HVD230 前端（CANH→6 脚、CANL→14 脚、共地），TWAI 按 500 kbps / 11-bit 初始化，先<strong>只收不发</strong>监听总线，确认能看到 ECU 的周期帧。然后用功能寻址 <code>0x7DF</code> 发 <code>02 01 0C</code>，看 <code>0x7E8</code> 有没有 <code>41 0C ..</code> 回来；若无应答改用物理寻址 <code>0x7E0</code>。</p>
+    <p>省力技巧：用逻辑分析仪或串口把 ScanST 的收发帧<strong>整段录下来</strong>，直接对照逆向——比从零试错快一个数量级。</p>
+    <p class="pass">通过标准：能稳定读出转速（怠速 1500±100 rpm 合理）和水温（冷车接近环境温度，热车 80–95°C）。</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="no">03</div>
+  <div>
+    <h4>车速与里程旁路 —— 已放弃</h4>
+    <p>原计划从轮速传感器（三线霍尔）取脉冲，经整形进 PCNT 计数，据此算车速和里程。<strong>用户评估后决定不做</strong>：要额外接线和整形电路，而车速这块原车仪表本来就有，对这块屏的边际价值不高。</p>
+    <p class="pass">替代方案：里程改从标准 PID <code>0x31</code> 读取（已实测 11582 km），并叠加「发动机运行时长」作为第二保养基准。</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="no">04</div>
+  <div>
+    <h4>联调 ESP-NOW 并装车</h4>
+    <p>定义固定长度二进制帧（不用 JSON，省带宽降延迟），带序号和 CRC；接收端做<strong>丢包插值 + 超时告警</strong>（超过 500ms 没数据就在屏幕上显示「信号丢失」而不是停在最后一个值——骑行时显示一个过期的转速比不显示更危险）。电源按第七节做防护，全部灌胶固定。</p>
+    <p class="pass">通过标准：连续骑行 1 小时无断连、无死机，熄火再启动能自动恢复。</p>
+  </div>
+</div>
+
+<h2>九、风险与红线</h2>
+
+<table>
+  <tr><th style="width:34%">风险</th><th style="width:12%">等级</th><th>应对</th></tr>
+  <tr><td>ECU 用的是完全私有的协议，KWP2000 试探全部失败</td><td><span class="tag t-warn">中</span></td><td>退回纯旁路方案：转速取点火线圈初级信号（需光耦隔离 + 分压），水温用 DS18B20 贴水管。功能不减，只是接线更麻烦。</td></tr>
+  <tr><td>诊断口针脚定义与通用三阳定义不一致</td><td><span class="tag t-warn">中</span></td><td>上电前先用万用表量电压（K 线静态应约 10V 左右），确认后再接前端，避免烧 L9637D。</td></tr>
+  <tr><td>长期震动导致焊点/座子失效</td><td><span class="tag t-warn">中</span></td><td>灌胶、改焊接、线束加固定点、留应力环。</td></tr>
+  <tr><td>静态耗电耗尽电瓶</td><td><span class="tag t-bad">高</span></td><td>强制走 ACC 开关电；开发板加深度睡眠。</td></tr>
+  <tr><td>接线短路 / 反接烧 ECU</td><td><span class="tag t-bad">高</span></td><td>串联 2A 保险；K 线只做<strong>高阻监听</strong>，绝不主动驱动总线；改动前断开电瓶负极。</td></tr>
+  <tr><td>骑行中分心看屏</td><td><span class="tag t-bad">高</span></td><td>屏幕装在视线边缘而非正中；信息密度控制在 4 项以内；不做需要触摸操作的骑行功能。</td></tr>
+</table>
+
+<div class="note danger">
+  <div class="h">安全红线</div>
+  <p>诊断口是<strong>只读监听</strong>用途，本项目不涉及任何写入或刷写 ECU 的操作，这部分是安全的。<strong>但绝不要在 K 线上主动驱动信号</strong>——L9637D 的 TX 端只在发送请求时使能，其余时间必须保持高阻，否则可能和 ECU 抢总线。</p>
+  <p>另外，涉及电路的改装请<strong>先断开电瓶负极</strong>，所有新增线路必须独立过保险，不要从原车线束上直接刮线取电。</p>
+</div>
+
+<footer>
+  <span>三阳飞度 5 · OBD 数显系统可行性分析</span>
+  <span>结论：路线可行，需替换 OBD 侧方案</span>
+</footer>
+
+</div>
+</body>
+</html>

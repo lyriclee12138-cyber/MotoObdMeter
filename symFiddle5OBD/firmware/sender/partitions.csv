@@ -1,0 +1,14 @@
+﻿# 发送端分区表（16MB Flash / N16R8）
+#
+# 为什么要自定义：默认的单 app 分区表只给应用 1MB，当前固件已经 0.74MB，
+# 剩 26%——以后再加点东西（比如存 DTC、OTA）就顶到天花板。现在还没上过车、
+# NVS 里没有要保留的数据，改分区是零成本的；等装了车再改会连里程/运行时长一起丢。
+#
+# factory 给 4MB：应用涨到 4MB 之前都不用再碰这张表。
+# storage 1MB 预留（以后放日志或标定数据，现在没用）。
+
+# Name,     Type, SubType, Offset,   Size,     Flags
+nvs,        data, nvs,     0x9000,   0x6000,
+phy_init,   data, phy,     0xf000,   0x1000,
+factory,    app,  factory, 0x10000,  4M,
+storage,    data, spiffs,  0x410000, 1M,

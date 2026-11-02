@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=5.5"
+  # 微雪官方 BSP：CO5300 QSPI 屏 + CST9217 触摸 + AXP2101 电源 + LVGL 移植
+  waveshare/esp32_s3_touch_amoled_1_75c: "^3.0.0"

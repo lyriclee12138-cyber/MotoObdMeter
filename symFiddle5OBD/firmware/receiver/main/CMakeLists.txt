@@ -1,0 +1,30 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "ui_gauge.c"
+        "ui_settings.c"
+        "ui_theme.c"
+        "perf.c"
+        "power.c"
+        "datasrc.c"
+        "version.c"
+        "fake_source.c"
+        "link.c"
+        "assets/gauge_assets.c"
+        "fonts/font_cjk_16.c"
+        "fonts/font_cjk_22.c"
+        "fonts/font_cjk_32.c"
+        "fonts/font_num_112.c"
+        "fonts/font_num_40.c"
+    INCLUDE_DIRS
+        "."
+        "assets"
+        "fonts"
+    REQUIRES
+        esp_timer
+        nvs_flash
+        shared          # telemetry.h：收发两端同一份定义
+        esp_wifi        # 含 ESP-NOW
+        esp_netif
+        esp_event
+)

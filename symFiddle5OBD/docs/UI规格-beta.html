@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>飞度5 圆屏仪表 · UI beta-1 规格锁定表</title>
+<style>
+:root{
+  --bg:#0e1014; --card:#161a21; --card2:#1c212a; --line:#2a303b;
+  --tx:#e8eaee; --tx2:#9aa3b0; --tx3:#6b7482;
+  --ok:#3ddc97; --warn:#f5a623; --bad:#ef5f5f; --info:#5aa9f5; --acc:#ff8a4c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  font-size:15px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:940px;margin:0 auto;padding:56px 28px 100px}
+header{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:44px}
+.kicker{font-size:12px;letter-spacing:.18em;color:var(--acc);text-transform:uppercase;margin-bottom:14px}
+h1{font-size:30px;font-weight:600;letter-spacing:-.01em;line-height:1.35}
+.sub{color:var(--tx2);margin-top:12px;font-size:14px}
+h2{font-size:19px;font-weight:600;margin:52px 0 18px;padding-left:13px;border-left:3px solid var(--acc);line-height:1.4}
+h3{font-size:15px;font-weight:600;margin:28px 0 10px;color:var(--tx)}
+p{margin:12px 0;color:var(--tx)}
+p.dim{color:var(--tx2);font-size:14px}
+strong{font-weight:600;color:#fff}
+code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:13px;background:var(--card2);padding:2px 6px;border-radius:4px;color:#ffc9a3}
+pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:16px 0}
+pre code{background:none;padding:0;font-size:12.5px;line-height:1.75;color:#c8d0dc;display:block}
+pre .c{color:var(--tx3)}
+ul,ol{margin:12px 0 12px 22px}
+li{margin:7px 0;color:var(--tx)}
+li::marker{color:var(--tx3)}
+
+.verdict{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:30px 0 8px}
+.v{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 16px}
+.v .n{font-size:22px;font-weight:600;line-height:1.15;letter-spacing:-.02em}
+.v .l{font-size:12px;color:var(--tx2);margin-top:8px}
+.v .d{font-size:11.5px;color:var(--tx3);margin-top:3px}
+.g{color:var(--ok)} .y{color:var(--warn)} .r{color:var(--bad)}
+
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:13.5px}
+th{text-align:left;font-weight:500;color:var(--tx2);font-size:12px;letter-spacing:.06em;
+   padding:9px 12px;border-bottom:1px solid var(--line);background:var(--card2)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.015)}
+td.mono,th.mono{font-family:ui-monospace,monospace;font-size:12.5px;color:#ffc9a3}
+td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap;font-weight:500}
+.t-ok{background:rgba(61,220,151,.13);color:var(--ok)}
+.t-warn{background:rgba(245,166,35,.13);color:var(--warn)}
+.t-bad{background:rgba(239,95,95,.13);color:var(--bad)}
+.t-info{background:rgba(90,169,245,.13);color:var(--info)}
+.t-gray{background:rgba(154,163,176,.12);color:var(--tx2)}
+
+.note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--acc);
+      border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0}
+.note.danger{border-left-color:var(--bad)}
+.note.good{border-left-color:var(--ok)}
+.note.info{border-left-color:var(--info)}
+.note .h{font-weight:600;margin-bottom:6px;font-size:14px}
+.note p{margin:6px 0;font-size:14px;color:var(--tx2)}
+.note strong{color:#fff}
+
+.sw{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:6px;border:1px solid rgba(255,255,255,.18)}
+footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--tx3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">UI BASELINE · beta-1 · LOCKED</div>
+  <h1>飞度5 圆屏仪表 · 界面规格锁定表</h1>
+  <p class="sub">本表逐项记录 beta-1 的全部几何、色值、绘制顺序与交互参数。<strong>后续任何改版，必须对照本表逐项核对</strong>，不得凭印象重建。<br>
+  基线文件：<code>docs/gauge-ui-beta.html</code>（可交互，已锁定）　锁定日期：2026-10-31</p>
+</header>
+
+<div class="verdict">
+  <div class="v"><div class="n g">beta-1</div><div class="l">版本号</div><div class="d">2026-10-31 验收通过</div></div>
+  <div class="v"><div class="n">466 × 466</div><div class="l">目标屏</div><div class="d">设计单位 ≈ 屏幕像素</div></div>
+  <div class="v"><div class="n">240°</div><div class="l">指针扫角</div><div class="d">下方缺口 120°</div></div>
+  <div class="v"><div class="n">0–10000</div><div class="l">转速量程</div><div class="d">红区 8000 起</div></div>
+</div>
+
+<h2>一、画布与坐标系</h2>
+
+<table>
+  <tr><th style="width:26%">项</th><th style="width:22%">值</th><th>说明</th></tr>
+  <tr><td>viewBox</td><td class="mono">0 0 680 508</td><td>宽 680 用于左右留白，表盘本身直径 464</td></tr>
+  <tr><td>圆心</td><td class="mono">(340, 250)</td><td>所有元素的 cx / cy 基准</td></tr>
+  <tr><td>外径</td><td class="mono">r = 232</td><td>直径 464，对应 466 屏，<strong>1 设计单位 ≈ 0.996 屏幕像素</strong></td></tr>
+  <tr><td>角度零点</td><td class="mono">12 点方向</td><td>坐标为 <code>x = cx + r·sin θ</code>，<code>y = cy − r·cos θ</code></td></tr>
+  <tr><td>起点 / 终点</td><td class="mono">240° / 480°</td><td>8 点方向起，顺时针到 4 点方向，正下方留 <strong>120°</strong> 缺口</td></tr>
+  <tr><td>角度公式</td><td class="mono">ang(v) = 240 + 240·v/10000</td><td>每 1000 rpm = 24°，刻度与数字共用此函数</td></tr>
+</table>
+
+<div class="note info">
+  <div class="h">为什么正下方要留 120° 缺口</div>
+  <p>指针永远扫不到正下方，所以水温行可以放在那里而不被遮挡。这是整个布局的地基，<strong>改动扫角会连带改动水温位置</strong>。</p>
+</div>
+
+<h2>二、半径层级（不可违反的单调关系）</h2>
+
+<p>这一层的顺序是前几版反复出错的根因。<strong>任何元素的位置调整，都必须先验证下面这个不等式仍然成立</strong>，再动手改。</p>
+
+<pre><code>轴心点 7 &lt; 内凹盘 19 &lt; 金属面 36
+  &lt; 数字环 129（字高约 ±17 → 外沿 146）
+  &lt; 内盘面 152
+  &lt; 刻度 168–192
+  &lt; 槽内缘 198
+  &lt; 色块 202.5–221.5
+  &lt; 槽外缘 226
+  &lt; 环带 226–232</code></pre>
+
+<table>
+  <tr><th style="width:22%">层</th><th style="width:14%">半径</th><th style="width:16%">带宽</th><th>关键约束</th></tr>
+  <tr><td>外底板</td><td class="mono">232</td><td>—</td><td>最外层，填充 <code>plateG</code></td></tr>
+  <tr><td>金属环带</td><td class="mono">229（stroke 6）</td><td>226–232</td><td>压在底板上，靠描边实现，非独立圆</td></tr>
+  <tr><td>红区下沉槽</td><td class="mono">198–226</td><td>28</td><td><strong>必须完全在刻度（192）之外</strong></td></tr>
+  <tr><td>红区色块</td><td class="mono">202.5–221.5</td><td>19</td><td>比槽窄 9，四周各露 3.5–4.5 槽底</td></tr>
+  <tr><td>刻度</td><td class="mono">168–192</td><td>24</td><td>主刻度 168→192，次刻度 178→192</td></tr>
+  <tr><td>内盘面</td><td class="mono">152</td><td>—</td><td>托住数字环</td></tr>
+  <tr><td>刻度数字</td><td class="mono">129</td><td>字高 ±17</td><td>落在盘面上，外沿 146，距盘缘 6</td></tr>
+  <tr><td>金属轴心</td><td class="mono">36</td><td>—</td><td>最小的一层，遮指针中段</td></tr>
+</table>
+
+<h2>三、逐元素参数</h2>
+
+<h3>3.1 外圈金属环带（4 层 + 1 条弧）</h3>
+<table>
+  <tr><th style="width:8%">序</th><th style="width:30%">元素</th><th>参数</th></tr>
+  <tr><td class="num">1</td><td>外底板</td><td class="mono">circle r=232 fill=url(#plateG)</td></tr>
+  <tr><td class="num">2</td><td>环带</td><td class="mono">circle r=229 fill=none stroke=url(#rimG) sw=6</td></tr>
+  <tr><td class="num">3</td><td>外倒角高光</td><td class="mono">circle r=231.7 stroke=#ffffff sw=1.5 op=.92</td></tr>
+  <tr><td class="num">4</td><td>内缘暗线</td><td class="mono">circle r=226.4 stroke=#8d939d sw=1.2 op=.6</td></tr>
+  <tr><td class="num">5</td><td>顶部反射弧</td><td class="mono">M159.1 108.6 A229.6 229.6 0 0 1 520.9 108.6<br>stroke=#ffffff sw=2.6 op=.72 round（±52°）</td></tr>
+</table>
+<p class="dim">光泽不靠渐变本身，靠第 2·3·4 层的“亮线—暗线”夹层。<strong>顶部那条白弧保留；底部不画任何弧</strong>（见第五节）。</p>
+
+<h3>3.2 红区下沉槽</h3>
+<table>
+  <tr><th style="width:26%">元素</th><th>参数</th></tr>
+  <tr><td>槽底</td><td class="mono">sector(198, 226, 228°, 492°)　fill=url(#slotG)</td></tr>
+  <tr><td>槽内壁</td><td class="mono">arcPath(199.5) stroke=#9aa0aa sw=1.5 op=.5</td></tr>
+  <tr><td>槽外沿</td><td class="mono">arcPath(224.5) stroke=#ffffff sw=1.2 op=.85</td></tr>
+  <tr><td>橙块</td><td class="mono">sector(202.5, 221.5, 432.4°, 455.6°)　fill=#F0812E</td></tr>
+  <tr><td>红块</td><td class="mono">sector(202.5, 221.5, 456.4°, 480°)　fill=#E23A2C</td></tr>
+</table>
+<p class="dim">角度换算：432.4° ≈ 8017 rpm，455.6° ≈ 8983 rpm，456.4° ≈ 9017 rpm。即<strong>橙区 8000–9000、红区 9000–10000，中间留 0.8° 缝</strong>。</p>
+
+<h3>3.3 刻度与数字</h3>
+<table>
+  <tr><th style="width:22%">项</th><th>参数</th></tr>
+  <tr><td>刻度间隔</td><td class="mono">500 rpm（0 到 10000 共 21 根）</td></tr>
+  <tr><td>主刻度（每 1000）</td><td class="mono">r 168→192　sw=2.2　#5a5f68　op=.85</td></tr>
+  <tr><td>次刻度（每 500）</td><td class="mono">r 178→192　sw=1.0　#8a8f98　op=.45</td></tr>
+  <tr><td>线帽</td><td class="mono">round</td></tr>
+  <tr><td>数字</td><td class="mono">每 1000 一个，共 11 个（0/1/2/…/10）<br>r=129　font-size=27　weight=400　fill=#2b2e35<br>text-anchor=middle　dominant-baseline=central</td></tr>
+  <tr><td>单位小字</td><td class="mono">x=340 y=203　“1/min ×1000”　12px　#9aa0a9　letter-spacing=1.4</td></tr>
+</table>
+<div class="note danger">
+  <div class="h">数字必须显示 0–10，不是 0–5</div>
+  <p>循环变量是下标（0–10），标签值必须是 <code>v/1000</code>。<strong>曾错把下标当显示值</strong>，结果万转位置标成 5。改这块代码时盯住这一点。</p>
+</div>
+
+<h3>3.4 内盘面</h3>
+<table>
+  <tr><th style="width:26%">元素</th><th>参数</th></tr>
+  <tr><td>盘面</td><td class="mono">circle r=152 fill=url(#faceG) filter=url(#shPanel)</td></tr>
+  <tr><td>边缘白线</td><td class="mono">circle r=151 stroke=#ffffff sw=1 op=.8</td></tr>
+  <tr><td>投影</td><td class="mono">shPanel: dy=4 stdDeviation=7 flood=#6b7280 op=.14</td></tr>
+</table>
+<p class="dim"><strong>盘面上不画任何装饰弧</strong>。曾加过顶部高光弧与底部暗弧，半径正好穿过数字那一圈，看起来像污渍，已删除。立体感由 <code>faceG</code> 渐变 + 投影独立承担。</p>
+
+<h3>3.5 水温行（文字形式）</h3>
+<table>
+  <tr><th style="width:20%">元素</th><th style="width:24%">参数</th><th>备注</th></tr>
+  <tr><td>“水温”</td><td class="mono">x=302 y=366 anchor=end<br>15px　#9aa0a9　ls=1</td><td>定宽不动</td></tr>
+  <tr><td>温度值</td><td class="mono">x=346 y=366 anchor=middle<br>46px　weight=300</td><td>颜色随温度变</td></tr>
+  <tr><td>“°C”</td><td class="mono">x=390 y=366 anchor=start<br>18px　#9aa0a9</td><td>定宽不动</td></tr>
+  <tr><td>整行范围</td><td class="mono">272 – 412</td><td>中点 342，圆心 340，偏右 2px</td></tr>
+</table>
+<div class="note">
+  <div class="h">为什么数字中心是 346 而不是 340</div>
+  <p>数字用 <code>middle</code> 锚点，两位「42」与三位「108」都以同一点居中——三位数会向左多占 13px。左侧必须让出这段空间，否则「108」会压到「水温」上。现在三位数时左侧仍有 5.5px 间距。</p>
+  <p>这也顺带解决了抖动：数字中心固定，位数变化时整行不会横向跳。</p>
+</div>
+
+<h3>3.6 指针</h3>
+<table>
+  <tr><th style="width:24%">元素</th><th>参数</th></tr>
+  <tr><td>针身</td><td class="mono">M340 72 L345.2 230 L342.6 304 L340 310 L337.4 304 L334.8 230 Z</td></tr>
+  <tr><td>尖端 / 尾部</td><td class="mono">尖端 r=178（y=72）　尾部 r=−60（y=310）</td></tr>
+  <tr><td>填充</td><td>随转速插值（见 4.1）</td></tr>
+  <tr><td>描边</td><td class="mono">同色 × 0.62　sw=0.7</td></tr>
+  <tr><td>高光条</td><td class="mono">M338.4 100 L341.4 228 L340.3 296　#ffffff sw=1.7 op=.55 round</td></tr>
+  <tr><td>针尖白点</td><td class="mono">circle (340,74) r=2.8　#ffffff op=.85</td></tr>
+  <tr><td>投影</td><td class="mono">shNeedle: dy=3 stdDeviation=3.2 flood=#5d5f66 op=.24</td></tr>
+  <tr><td>旋转</td><td class="mono">rotate(ang(v), 340, 250)</td></tr>
+</table>
+<p class="dim">投影必须是<strong>中性灰</strong>，不能用指针色。红针配红投影没问题，但绿针配红投影会显脏。</p>
+
+<h3>3.7 金属轴心（3 层）</h3>
+<table>
+  <tr><th style="width:8%">序</th><th style="width:20%">元素</th><th>参数</th></tr>
+  <tr><td class="num">1</td><td>金属面</td><td class="mono">circle r=36 fill=url(#hubMetalG)</td></tr>
+  <tr><td class="num">2</td><td>外缘描边</td><td class="mono">circle r=36 stroke=#8b919b sw=0.9 op=.55</td></tr>
+  <tr><td class="num">3</td><td>内凹盘</td><td class="mono">circle r=19 fill=url(#hubDishG)</td></tr>
+  <tr><td class="num">4</td><td>凹盘描边</td><td class="mono">circle r=19 stroke=#9aa0aa sw=0.8 op=.5</td></tr>
+  <tr><td class="num">5</td><td>轴心点</td><td class="mono">circle r=7 fill=#7d838c</td></tr>
+  <tr><td>整体</td><td>投影</td><td class="mono">shHub: dy=7 stdDeviation=9 flood=#5b616b op=.28</td></tr>
+</table>
+<p class="dim">金属感的唯一来源是 <code>hubMetalG</code> 的<strong>偏心径向渐变</strong>（<code>cx=0.36 cy=0.28 r=0.82</code>），高光在左上三分之一处。不要再叠外台、凹槽环、凸起面——<strong>3 层就是这个版本的定案</strong>。</p>
+
+<h2>四、颜色</h2>
+
+<h3>4.1 指针颜色（随转速连续插值）</h3>
+<table>
+  <tr><th style="width:16%">转速</th><th style="width:14%">t = v/10000</th><th style="width:20%">色值</th><th>骑行含义</th></tr>
+  <tr><td class="num">0</td><td class="mono">0.00</td><td><span class="sw" style="background:#22c55e"></span><code>#22c55e</code></td><td>熄火 / 起步</td></tr>
+  <tr><td class="num">4000</td><td class="mono">0.40</td><td><span class="sw" style="background:#4ade80"></span><code>#4ade80</code></td><td>日常巡航，仍是绿</td></tr>
+  <tr><td class="num">6000</td><td class="mono">0.60</td><td><span class="sw" style="background:#facc15"></span><code>#facc15</code></td><td>中段，转黄</td></tr>
+  <tr><td class="num">7800</td><td class="mono">0.78</td><td><span class="sw" style="background:#fb923c"></span><code>#fb923c</code></td><td>拉高转，转橙</td></tr>
+  <tr><td class="num">8600</td><td class="mono">0.86</td><td><span class="sw" style="background:#ef4444"></span><code>#ef4444</code></td><td>进红区前段</td></tr>
+  <tr><td class="num">10000</td><td class="mono">1.00</td><td><span class="sw" style="background:#dc2626"></span><code>#dc2626</code></td><td>满表</td></tr>
+</table>
+<p class="dim">线性 RGB 插值。绿色段刻意拉到 4000，因为踏板车九成时间在 4000 以下，太早变黄会让红色失去警示力。</p>
+
+<h3>4.2 温度颜色（三档，无插值）</h3>
+<table>
+  <tr><th style="width:22%">条件</th><th style="width:20%">色值</th><th>说明</th></tr>
+  <tr><td class="mono">&lt; 55 °C</td><td><span class="sw" style="background:#2E7FD0"></span><code>#2E7FD0</code></td><td>冷车未达工作温度</td></tr>
+  <tr><td class="mono">55 – 104 °C</td><td><span class="sw" style="background:#2b2e35"></span><code>#2b2e35</code></td><td>正常，跟随主文字色</td></tr>
+  <tr><td class="mono">≥ 105 °C</td><td><span class="sw" style="background:#E23A2C"></span><code>#E23A2C</code></td><td>过热，需靠边</td></tr>
+</table>
+
+<h3>4.3 各层填充</h3>
+<table>
+  <tr><th style="width:20%">变量</th><th>定义</th></tr>
+  <tr><td class="mono">plateG</td><td class="mono">线性 竖向　#ffffff → #c9cdd4　<strong>两停靠点，不要加中间色</strong></td></tr>
+  <tr><td class="mono">rimG</td><td class="mono">线性 竖向　#ffffff (.00) → #e6e9ee (.34) → #c1c6ce (.70) → #99a0aa (1)</td></tr>
+  <tr><td class="mono">faceG</td><td class="mono">线性 竖向　#fdfdff → #d9dbe0　<strong>两停靠点</strong></td></tr>
+  <tr><td class="mono">slotG</td><td class="mono">线性 (0,0)→(1,0.55)　#b6bac2 → #d8dbe1 → #eef0f3</td></tr>
+  <tr><td class="mono">hubMetalG</td><td class="mono">径向　cx=.36 cy=.28 r=.82　#ffffff → #e4e7ec (.42) → #c6cbd3 (.78) → #9ba1aa (1)</td></tr>
+  <tr><td class="mono">hubDishG</td><td class="mono">线性 竖向　#9aa0a9 → #d5d9df (.6) → #f2f3f6　<strong>顶暗底亮（凹陷），与外圈相反</strong></td></tr>
+</table>
+
+<h2>五、绘制顺序与“禁止出现”清单</h2>
+
+<h3>5.1 DOM 顺序（不可乱）</h3>
+<pre><code>外底板 → 环带 → 外倒角 → 内缘暗线 → 顶部反射弧
+ → 槽底 → 槽内壁 → 槽外沿 → 橙块 → 红块
+ → 刻度 → 内盘面 → 盘面白边
+ → 刻度数字 → 单位小字 → 水温行
+ → 指针 → 金属轴心</code></pre>
+<div class="note danger">
+  <div class="h">三条硬规则</div>
+  <p><strong>① 凡是要画在盘面上的东西，DOM 顺序必须在盘面之后。</strong>曾把数字组放在盘面之前，整片数字被盖住，现象是“数字消失了”而不是“位置错了”。</p>
+  <p><strong>② 指针必须在数字之后</strong>，否则数字会浮在针上面。</p>
+  <p><strong>③ 轴心必须在指针之后</strong>——这是“贯穿感”的唯一来源：先画整根长针，再用轴盘遮住中段。</p>
+</div>
+
+<h3>5.2 本版明确不含的元素</h3>
+<table>
+  <tr><th style="width:34%">元素</th><th style="width:14%">状态</th><th>原因</th></tr>
+  <tr><td>外圈底部灰弧（±38°）</td><td><span class="tag t-bad">已删除</span></td><td>参考图里没有，是我凭空补的“光泽”。<strong>不要再加回来</strong></td></tr>
+  <tr><td>盘面顶部高光弧 / 底部暗弧</td><td><span class="tag t-bad">已删除</span></td><td>半径穿过数字环，看起来像污渍</td></tr>
+  <tr><td>温度计图标</td><td><span class="tag t-bad">已删除</span></td><td>改为「水温」文字，图标观感不佳</td></tr>
+  <tr><td>轴心的外台 / 凹槽环 / 凸起面</td><td><span class="tag t-bad">已删除</span></td><td>层次过多，轴心定案为 3 层</td></tr>
+  <tr><td>底部里程 / 运行时长行</td><td><span class="tag t-bad">已删除</span></td><td>用户确认不需要，主界面只留指针+刻度+水温</td></tr>
+  <tr><td>顶部 rpm 精确数字</td><td><span class="tag t-bad">未采用</span></td><td>当前版本不显示，指针+刻度已足够</td></tr>
+</table>
+
+<h2>六、交互与假数据</h2>
+<p>基线文件提供滑块（0–10000，步进 10）与四个场景按钮，用于在不接硬件时验证界面：</p>
+<table>
+  <tr><th style="width:20%">按钮</th><th style="width:14%">转速</th><th style="width:14%">水温</th><th>验证点</th></tr>
+  <tr><td>怠速冷车</td><td class="mono">1450</td><td class="mono">41 °C</td><td>指针在左下、绿色；水温为蓝色冷车色</td></tr>
+  <tr><td>城市巡航</td><td class="mono">5200</td><td class="mono">84 °C</td><td>指针近垂直偏右、黄绿过渡；水温黑字</td></tr>
+  <tr><td>急加速</td><td class="mono">9000</td><td class="mono">89 °C</td><td>指针进红块区、针身转红</td></tr>
+  <tr><td>过热</td><td class="mono">3200</td><td class="mono">108 °C</td><td>水温三位数且变红，检查是否与「水温」重叠</td></tr>
+</table>
+
+<h2>七、LVGL 落地换算</h2>
+<table>
+  <tr><th style="width:26%">项</th><th>换算</th></tr>
+  <tr><td>scale 量程</td><td class="mono">lv_meter_set_scale_range(meter, 0, 10000, 240, 150)</td></tr>
+  <tr><td>rotation 为何是 150</td><td>LVGL 的 0° 在 3 点方向、顺时针；本设计以 12 点为 0°，<code>240 − 90 = 150</code></td></tr>
+  <tr><td>尺寸</td><td>按 1:1 用像素值（屏 466，设计直径 464，误差 2px 可忽略）</td></tr>
+  <tr><td>指针颜色</td><td>6 档查表 + <code>lv_color_mix</code>，<strong>不要每帧全量插值</strong></td></tr>
+  <tr><td>轴心 / 环带</td><td>建议预渲染为 466×466 底图（不含指针），Flash 约 400KB RGB565</td></tr>
+</table>
+
+<h2>八、改版流程（防止再改到别的东西）</h2>
+<ol>
+  <li><strong>先复制</strong>：<code>gauge-ui-beta.html</code> → <code>gauge-ui-vN.html</code>，在副本上改，基线文件保持不动。</li>
+  <li><strong>只动点名的元素</strong>：增删对应 DOM 元素或改对应变量。<strong>不要重写整段 <code>&lt;defs&gt;</code></strong>——曾因重写 defs 把 plateG / faceG 的停靠点和三组投影参数一起改掉，整体质感失真。</li>
+  <li><strong>一次只改一处</strong>，确认没影响到别处再改下一处。</li>
+  <li><strong>改完核对</strong>：半径单调关系（第二节）、绘制顺序（5.1）、可用色值表（第四节）。</li>
+  <li><strong>不要补参考图里没有的元素</strong>。这是最近一次翻车的原因——加了底部弧，用户第一眼就看出来。</li>
+  <li>验收通过后另存为新的 beta，并把本表升版。</li>
+</ol>
+
+<div class="note info">
+  <div class="h">改完跑一遍校验脚本，别靠肉眼对本表</div>
+  <p><code>python3 docs/check-ui.py docs/gauge-ui-vN.html</code></p>
+  <p>脚本会检查三类：<strong>必备参数</strong>（本表第三、四节的硬性数值）、<strong>禁用元素</strong>（第五节点名的那些东西有没有被加回来）、<strong>绘制顺序与标签闭合</strong>。全部通过才输出“与 beta-1 规格一致”。</p>
+  <p>不带参数时默认校验基线：<code>python3 docs/check-ui.py</code>。它抓的是“数值漂移”，抓不到“观感变差”，但那正是本表存在的意义。</p>
+</div>
+
+<div class="note good">
+  <div class="h">一句话判断标准</div>
+  <p>改完之后，如果<strong>不能逐条指着本表说明“我只改了第 X 项”</strong>，那就说明改多了，回退重来。</p>
+</div>
+
+<footer>
+  飞度5 圆屏仪表 · UI beta-1 规格锁定表 · 2026-10-31<br>
+  基线文件 <code>docs/gauge-ui-beta.html</code>　规格表 <code>docs/UI规格-beta.html</code>　校验脚本 <code>docs/check-ui.py</code><br>
+  配套文档 <code>docs/可行性分析报告.html</code>、<code>docs/CAN方案需求清单.html</code>
+</footer>
+
+</div>
+</body>
+</html>

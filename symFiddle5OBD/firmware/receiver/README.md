@@ -1,0 +1,416 @@
+# 接收端（圆屏）固件
+
+微雪 **ESP32-S3-Touch-AMOLED-1.75C**（466×466 CO5300 QSPI + CST9217 触摸 + AXP2101）。
+
+当前阶段：**假数据 + 界面已跑通**，还没接 ESP-NOW。发送端硬件到货后再把 `fake_source` 换成无线接收。
+
+---
+
+## 一、界面从哪来
+
+界面不是用 LVGL 的控件拼的，而是把 `docs/UI规格-beta.html` 的 beta-1 参数**渲染成位图**再显示。原因：beta-1 那套层次（金属环带、下沉槽、投影、渐变）用 LVGL 画不出来，会走样。
+
+三层结构，全部是图片：
+
+| 图层 | 文件 | 格式 | 说明 |
+|---|---|---|---|
+| 背景 | `bg.png` | RGB565 466×466 | 外圈、红区槽、色块、刻度、0–10 数字、单位字、"水温"标签 |
+| 针身 | `needle_body.png` | L8 360×360 | 靠 LVGL recolor 染色，颜色随转速变 |
+| 高光 | `needle_hi.png` | L8 360×360 | 恒白，叠在针身上 |
+| 轴心 | `hub.png` | ARGB8888 152×152 | 含投影，**必须画在指针之后**，否则没有贯穿感 |
+
+`main/assets/gauge_assets.c` 是这四张图转成的 C 数组（约 770 KB），由 `tools/png2c.py` 生成。
+
+**改界面 = 改图，不是改 C 代码。**
+
+```bash
+# 1. 按 beta-1 规格调整渲染参数
+vim tools/gauge_art.py
+
+# 2. 重新渲染
+/home/lee/.workbuddy/binaries/python/envs/default/bin/python tools/gauge_art.py
+
+# 3. 合成一张预览图，先目视验收
+/home/lee/.workbuddy/binaries/python/envs/default/bin/python tools/preview.py
+#    → build/preview_idle.png / _cruise.png / _hot.png / _redline.png
+
+# 4. 满意了再转 C 数组并同步到工程
+/home/lee/.workbuddy/binaries/python/envs/default/bin/python tools/png2c.py
+cp build/assets/gauge_assets.[ch] firmware/receiver/main/assets/
+```
+
+改任何视觉参数前，先看 `docs/UI规格-beta.html`，跑 `python3 docs/check-ui.py` 确认没偏离基线。
+
+---
+
+## 二、代码结构
+
+```
+main/
+  main.c          启动 BSP、建界面、30fps 循环喂假数据
+  ui_gauge.c      图层创建与刷新（旋转指针、染色、温度文字）
+  fake_source.c   20 秒循环的骑行曲线，覆盖绿/黄/橙/红四段和水温三色
+  assets/         gauge_assets.c/h（4 MB 源码，编译要一会儿）
+```
+
+关键的几个数值都在 `ui_gauge.c` 顶部：
+
+```c
+#define ANG_START  240      // 指针起点：8 点方向（0° = 12 点，顺时针）
+#define ANG_SPAN   240      // 扫角，正下方留 120° 给水温
+#define TEMP_CX    239      // 温度数字中心（屏坐标）
+#define TEMP_CY    349
+```
+
+指针旋转：`deg10 = (240 + 240*rpm/10000) * 10`，LVGL 用 0.1° 为单位。
+
+---
+
+## 三、编译
+
+**当前机器是 Windows（LEE-HOME），环境已装好，不需要自己搭。** 构建一律走包装脚本：
+
+```bash
+cd firmware/receiver
+/c/workspace/sym_fiddle5_obd/idf.bat -B build build          # 首次 8 分钟，改一个 .c 增量 23 秒
+/c/workspace/sym_fiddle5_obd/idf.bat -B build -p COM4 flash  # 板子固定是 COM4（VID 303A:1001）
+```
+
+| 项 | 位置 |
+|---|---|
+| ESP-IDF v5.5.5 | `C:/esp/v5.5.5/esp-idf` |
+| 工具链 / cmake / ninja / venv | `C:/Espressif/tools` |
+| `idf.bat` 干的两件关键事 | ① `set "MSYSTEM="` —— **Git Bash 会带 MSYSTEM 进来，idf.py 检测到就直接跳过 main()、静默退出 0**；② 纯 ASCII 编码 —— cmd 按 GBK 读，中文注释会把 `set` 行解析坏 |
+
+> 跑 python 工具（gauge_art / preview / png2c）用 `source /c/workspace/sym_fiddle5_obd/env.sh` 拿环境变量，
+> 但**不要用它构建**：MSYS 的路径转换会篡改 cmake 的 `-D` 参数。
+
+<details>
+<summary>历史：旧机（Ubuntu / i5-5200U）的 `~/esp/env.sh` 三处特殊变量（本机不再需要，留作追溯）</summary>
+
+| 变量 | 为什么 |
+|---|---|
+| `IDF_PYTHON_ENV_PATH` | 指向 IDF 自建的 venv（依赖装在这里，不是 `idf_tools` 的默认流程） |
+| `IDF_PYTHON_CHECK_CONSTRAINTS=0` | 官方 constraints 文件在 dl.espressif.com 上拉不到（502） |
+| `CODEBUDDY_BROKERED_FS_HOOK_ENABLED=0` | **必须**。文件访问钩子会把"文件不存在"变成 EPERM，gcc 的头文件搜索链会中断，报 `features.h: Operation not permitted` |
+
+</details>
+
+工具链只装了 `xtensa-esp-elf` + `esp-rom-elfs`，没装 gdb / openocd / riscv（用不上，省 400 MB）。
+
+组件裁剪写在 `sdkconfig.defaults` 末尾：关掉了 freetype、图像解码器、文件系统，以及 LVGL 用不到的控件（chart / table / textarea / keyboard / slider …）。只留 image / label / button / span。
+
+---
+
+## 四、分区与资源
+
+`partitions.csv`：32 MB Flash，app 分区 **6 MB**（图像资源占 0.8 MB，LVGL 代码约 600 KB）。
+
+PSRAM 8 MB 走 OCT 80 MHz，LVGL 的绘制缓冲放在 PSRAM。
+
+---
+
+## 五、上板前要确认的
+
+1. **屏幕亮不亮**。AXP2101 的上电时序在 BSP 里，如果黑屏先查 `idf.py monitor` 里 AXP2101 的初始化日志。
+2. **指针转的方向对不对**。LVGL 的旋转是顺时针为正，设计也是顺时针；如果反了，把 `image_rotate` 里的角度取负。
+3. **温度数字位置**。`TEMP_CX/CY` 是按 beta-1 定的 (239,349)，实际屏可能有 1–2 px 偏差。
+4. **轴心是否盖住指针**。如果指针中段露出来，说明对象创建顺序错了（轴心必须在指针之后创建）。
+
+---
+
+## 六、下一阶段
+
+- 接收端加 ESP-NOW（`esp_now_init` + 接收回调），把 `fake_source_get()` 换成 `telemetry_t` 解析
+- 断连时界面显示 `--`（`ui_gauge_update` 已经支持 `INT8_MIN` 表示无效）
+- 发送端把 `telemetry_t` 按 23 字节发出来
+
+---
+
+## 七、上板后发现的坑（2026-11-01 实测）
+
+### 指针图必须用 A8，不能用 L8
+
+`L8` 是灰度格式，0 表示**纯黑**而不是透明。第一版用 L8，整张 360×360 被画成一块实心黑方块，
+跟着指针一起转（用户第一眼就看见了）。
+
+`A8` 是纯 alpha 蒙版，0 才是透明。但 A8 不带颜色，**颜色必须靠 `image_recolor` 给**，
+忘了设就显示成黑色。
+
+### `bsp_display_lock(0)` 不是"永久等待"
+
+```c
+// ✗ 界面完全不创建，日志报 Failed to acquire LVGL lock
+if (bsp_display_lock(0) == ESP_OK) { ... }
+
+// ✓
+if (esp_lv_adapter_lock(-1) == ESP_OK) { ...; esp_lv_adapter_unlock(); }
+```
+
+`bsp_display_lock(uint32_t)` 透传给 `esp_lv_adapter_lock(int32_t)`，**0 = 不等待、立即超时**。
+而且参数是 uint32_t，传不进 -1，所以直接调适配层。
+
+### 读串口必须把 DTR 和 RTS 拉低
+
+ESP32-S3 的 USB-JTAG 串口，用默认参数打开读不到任何数据：
+
+```python
+s = serial.Serial(); s.port='/dev/ttyACM0'; s.baudrate=115200
+s.dtr = False; s.rts = False      # 少了这两行，一行日志都收不到
+s.open()
+```
+
+### 帧率：已解决，4 fps → 42–59 fps（2026-11-01）
+
+旧结论「瓶颈是 `lv_image_set_rotation` 对 360×360 的逐像素重采样」**只对了一半**。
+实测拆开来看，真正的根因是 **每帧重绘的面积太大**，不是旋转算法本身慢。
+
+测法：给显示挂 `LV_EVENT_RENDER_*` 打点，把「渲染 / 刷屏 / 帧间隔」分开（`main/perf.c`）。
+
+| 消融实验 | 渲染耗时 | 说明 |
+|---|---|---|
+| 全屏重绘（无指针，每帧强制整屏作废） | **58 ms** | 217k 像素，约 267 ns/像素，这是本平台的上限基准 |
+| 指针静态 + recolor 每帧变（不旋转） | 70 ms | 已经是大头 —— 说明问题不在旋转 |
+| 指针旋转（基线） | 240 ms | `lv_image_set_rotation` + `set_style_image_recolor` 每帧把**整个 360×360 图层**标脏 |
+| 只重绘扫过区域 + 关抗锯齿 | 20 ms | 脏区从 176k 像素降到 10–20k |
+
+三条修复，缺一不可：
+
+1. **指针改成自绘，不再用 `lv_image` + 样式**
+   `needle_draw_cb()` 在 `LV_EVENT_DRAW_MAIN` 里用 `lv_draw_image()` 自己画，
+   角度和颜色存在静态变量里。这样**改颜色不再触发整块作废**（原来的元凶）。
+2. **脏矩形**：`invalidate_sweep()` 只作废「旧角度→新角度」扫过的那一带，
+   而且沿半径切成 3 段小矩形（斜着的指针包围盒接近整个圆盘，切段后面积降到 1/8）。
+   切 6 段反而更慢——每多一个脏区就多一趟渲染，**每趟约 4 ms 固定开销**，2–3 段是最优。
+3. **主循环跟着屏幕节奏走**：`perf_wait_frame()` 等 `LV_EVENT_REFR_READY` 再推下一帧。
+   推得比刷新快会在一个刷新周期里攒下多个脏区，等于同一片像素画好几遍。
+
+另外两项白捡的：
+
+- **CPU 主频 160 MHz → 240 MHz**（`CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ=240`）。逐像素绘制直接快 50%，
+  原来的 sdkconfig 是 160，一直没注意。
+- `CONFIG_LV_DEF_REFR_PERIOD` 33 ms → 16 ms。脏矩形把单帧压到 15 ms 以下之后，
+  33 ms 的刷新周期就成了天花板，上不去 30 fps。
+
+最终实测（假数据全速扫表，抗锯齿**开**）：**42–59 fps，渲染 16–24 ms，刷屏 1 ms**。
+
+> 指针图和背景图都在 flash（0x3C0xxxxx）。试过把指针图拷进内部 RAM / PSRAM，**没有任何改善**，
+> 所以别再往这个方向折腾——瓶颈是「画了多少像素」，不是「像素从哪读」。
+> 也不要指望 `CONFIG_LV_DRAW_SW_DRAW_UNIT_CNT=2` 双核绘制，这里是面积问题，不是单核算力问题。
+
+`main/perf.c` 留着：串口每 2 秒打一行
+`绘制 N fps | 渲染 Xms 刷屏 Yms 帧间隔 Zms | 主循环 抢锁 Ums 锁内 Vms`，以后改 UI 直接看这行判断有没有退化。
+
+---
+
+## 八、设置页 / 黑夜模式 / 电量（2026-11-01）
+
+### 8.1 页面结构与翻页
+
+不是两个 screen，而是**同一个 screen 里的两个页面对象**（各 466×466），靠移动 `x` 做横向滑动。
+`lv_screen_load_anim` 在这套 BSP + 16 ms 刷新下不生效（表现为瞬间换屏），所以自己用 `lv_anim` 写。
+
+- 仪表页右滑 → 上一页；左滑 → 下一页；两个页面取模循环
+- 翻页动画期间 `ui_gauge_set_visible(false)`，指针不重绘（少一次 360×360 变换，省 10–20 ms/帧）
+
+**性能现实（实测，别再试图优化到 60fps）**：
+
+| 项 | 数值 |
+|---|---|
+| 全屏重绘 | **50–58 ms/帧**（217k 像素 ≈ 230–267 ns/像素）|
+| 翻页动画 | 190 ms 里只有 **4–5 帧** |
+| 背景图搬 PSRAM | 无改善（不是 flash 带宽问题）|
+| 绘制缓冲 50 行 → 256 行 | 只快 8 ms（不是切条开销）|
+| 指针图搬内部 RAM/PSRAM | 无改善 |
+
+结论：**整屏重绘 ~50 ms 是这颗 S3 + LVGL 软件渲染的地板价**，任何改变大半屏的动画都只能 4–5 帧。
+要真正丝滑必须绕过 LVGL 直接 DMA 刷屏（预合成过渡帧），工程量较大，暂未做。
+
+`#define TEST_AUTOSLIDE 1` 可以打开"每 3 秒自动翻页"，用来量动画帧数（改完记得改回 0）。
+
+### 8.2 黑夜模式
+
+`tools/gauge_art.py` 里两套配色：`THEME_DAY`（= beta-1 基线，逐字照抄，**不要改**）和 `THEME_NIGHT`。
+一次渲染出 `bg.png` 和 `bg_dark.png`，主题切换只是换 `lv_image` 的 src + 重设水温字色。
+
+黑夜的要点：**明暗方向不能反**。顶亮底暗表示凸起，凹槽依旧顶暗底亮。刻度/数字提亮，红区色块保持不变。
+
+主题存 NVS（namespace `symui`，key `theme`），重启保持。
+
+### 8.3 电量（AXP2101）
+
+**微雪这块 BSP 里没有 PMU 驱动**，只有触摸在用 I2C，所以 `main/power.c` 是自己写的最小实现：
+
+| 寄存器 | 含义 |
+|---|---|
+| `0x00` bit5 | VBUS good（USB 有电）|
+| `0x00` bit3 | 电池在位 |
+| `0x01` bit[6:5] | **电池电流方向**：`00` 待机 / `01` 充电 / `10` 放电 |
+| `0x30` bit0 | 电池电压 ADC 使能，**上电默认可能是关的，要自己打开** |
+| `0x34`/`0x35` | 电池电压，14 bit，1 mV/LSB |
+| `0xA4` | 电量百分比 |
+
+实测：插 USB 且电池满 → `0x00=0x28`、`0x01=0x14`（方向=待机）、4154 mV、100%；
+拔掉 USB → `0x00=0x18`（bit5 清零）、`0x01` 方向变 `10`（放电）。
+
+> **踩过的坑（2026-11-01）**：`0x01` 的 bit[6:5] 是**电流方向**，不是"是否在充电"。
+> 一开始写成 `((st1 >> 5) & 3) != 0`，于是「放电（10）」也被当成「充电」，
+> 拔掉电源后界面永远显示「充电中」。正确判断是 `== 0x01`。
+
+`%f` 也别用：本工程 `CONFIG_LV_USE_FLOAT` 是关的，`lv_label_set_text_fmt` 里 `%.2f` 打不出来，
+电压要自己拆成 `%u.%02u`。
+
+读不到 AXP2101 时优雅降级为「--」，不影响界面。
+
+### 8.4 中文字体（三个必踩的坑）
+
+LVGL 内置的 Montserrat 没有中文字形，所以用 `tools/gen_fonts.sh` 生成子集字体（16 / 22 / 32 三档，共约 950 KB 源码）。
+三个坑都表现为「屏幕上一个字都没有」，而且**不报任何错**：
+
+1. **必须 `--no-compress`**。默认生成 RLE 压缩字形（`bitmap_format = 1`），
+   而本工程 `CONFIG_LV_USE_FONT_COMPRESSED` 是关的，LVGL 解不出来 → 全空白。
+2. **必须用静态 TTF**。`NotoSansSC-VF.ttf` 是可变字体（CFF2），`lv_font_conv` 转出来是空字形。
+   现用 `C:/Windows/Fonts/Deng.ttf`（等线）。
+3. **C 代码里给 label 设字体必须在 `set_text` 之前**。否则 LVGL 用默认字体（无中文字形、advance=0）
+   算内容宽度 → 标签被压成 0 宽 → 整段中文被裁掉。这一条最隐蔽，因为字形、码点、字符串全是对的。
+
+字符集**不手写**，由脚本从源码的字符串字面量里自动抽取（注释里的中文不算，否则会膨胀到 500+ 字）
+——手写漏一个字，那个字就是空白，同样不报错。
+
+抽取规则是「字符串里所有**非 ASCII** 字符」，不能只收中文：
+`"USB 供电 · 已充满"` 里的 `·`（U+00B7）既不在 ASCII 区（0x20–0x7F）也不在 CJK 区，
+漏掉就渲染成空白，看起来像多打了空格。
+
+### 8.5 屏幕亮度
+
+设置页第四张卡片是亮度滑条。本工程**没开 `LV_USE_SLIDER`**（当初为省 Flash 裁掉了），
+所以用基础对象自己拼：透明容器(接触摸) → 底槽 → 已选填充 → 圆钮。
+
+- 拖动时实时调 `bsp_display_brightness_set()`（LCD 命令 0x51，一次参数写，很便宜）
+- **松手才写 NVS**（`symui` / `bri`），拖动过程中不碰 Flash
+- 下限 10%：再低屏幕基本看不见，0 会让 AMOLED 直接黑掉，看起来像死机
+- 开机在 `ui_settings_create()` 里读回并应用
+
+**尺寸（2026-11-02 改过一版）**：原来是 120×24 的一小块，手指很难戳中。现在轨道横贯卡片
+（260px 宽），可点区域 300×30。可点区域**纵向只覆盖轨道那一带**（`BRI_HIT_Y=30`），
+连标题文字一起覆盖的话，点「亮度」两个字会把亮度直接跳到 0%。
+
+滑条容器是 clickable 的，所以横向拖动产生的 GESTURE 事件落在它身上、不会冒泡到页面，
+在亮度卡片上横滑不会误触发翻页（这正是想要的：那里滑动就是调亮度）。
+
+### 8.6 固件版本号（用来确认"到底烧进去没有"）
+
+版本串形如 `v2026.11.02-135432`，显示在**设置页最底部的「版本」卡片**里，
+启动日志也会打一行 `固件版本 v...`。固件文件名也用同一个时间戳，一一对应。
+
+- 时间部分是**编译时刻（精确到秒）**，比它大的一定是新固件，不需要额外后缀。
+  之所以到秒：同一分钟内连出两次包会撞版本号，那就失去区分意义了（踩过一次）。
+
+实现方式：`pack_firmware.sh` 每次出包重写 `main/version_env.h`（内含版本串常量），
+内容带时间戳所以每次都不一样 → `version.c` 必然重编 → 固件里的版本串必然更新。
+不这么做的话，增量编译很可能跳过 `version.c`，版本号就停在旧值上。
+
+> **为什么必须靠版本号**：手机端的 Flash 工具一般不发硬复位，烧完屏幕会停在
+> 最后一帧不动，看起来像卡死。手动重启后才知道跑的是哪一版——这时版本号是唯一判据。
+
+### 8.7 设置页上下滚动
+
+设置页的内容容器 `s_body` 高 540 > 屏幕 466，多出 74 px 就是可滑动范围。
+版本卡片在最下面，首屏只露出上沿，往下滑才看得全。
+
+> **踩过的坑（2026-11-02）**：第一版滚不动，不是手势问题，是**容器高度设错了**。
+> `s_body` 必须设成「一个屏幕大」（466×466），滚动是靠**子对象超出它**产生的；
+> 如果把 `s_body` 直接设成 540 高，它内部就没有溢出了，`lv_obj_get_scroll_bottom()` 返回 0，
+> 表现就是完全滑不动。判断依据：卡片右下角那个临时诊断显示 `0px` 就是这种。
+
+**关键点：滚动和翻页不能打架。** `s_body` 的 `scroll_dir` 必须只设 `LV_DIR_VER`：
+LVGL 的 `find_scroll_obj` 先按拖动主方向判（`|x| > |y|` 算水平），再用 `scroll_dir`
+过滤掉不允许的方向。只允许垂直时，水平拖动不可能被认定为滚动（`left_en`/`right_en` 全 false），
+于是照常发 GESTURE → 翻页；而垂直拖动会命中 `scroll_bottom`，成为滚动对象，
+此时 `indev_gesture()` 开头的 `if(indev->pointer.scroll_obj) return;` 会让 GESTURE 静默不发
+→ 滚动时不会误翻页。两种手势天然互斥，不需要额外逻辑。
+
+另外 `s_body` 会吃掉 press 事件，事件不一定冒泡到页面，所以 `main.c` 往它身上也挂了一份
+`gesture_cb`（通过 `ui_settings_scrollable()` 拿到句柄）。
+
+### 8.8 背景图四角必须合成到主题底色
+
+RGB565 没有 alpha 通道，`png2c.py` 要把透明像素合成到一个底色上。
+背景图 `bg.png` / `bg_dark.png` 的圆盘之外（四个角）全是透明的，
+所以**每张图必须合成到它自己主题的底色**：白天 `#F2F4F7`、黑夜 `#0E1013`。
+
+早期版本统一合成到白色（注释写的是"避免边缘发黑"），正常显示时四角被圆屏裁掉看不见，
+可一旦左右滑动，四个白角就转进可视区——黑夜模式下特别刺眼（2026-11-02 用户发现）。
+
+> 改主题配色时，`ui_theme.c` 里的 `p->bg` 和 `png2c.py` 里 `ITEMS` 的 bg 值要同步改，
+> 否则四角和页面底色会对不上。
+>
+> 另外 `main.c` 里最底层 `s_root` 的背景也订阅了主题（`root_apply_theme`），
+> 翻页动画中两页同时位移，万一有像素级缝隙也不会露出黑边。
+
+### 8.9 仪表页 v2：极简弧线版（2026-11-02 换设计）
+
+旧版（金属表盘 + 指针）已存档到 `snapshots/design-v1-metal-2026-11-02.tar.gz`，
+固件也留了 `design-v1-firmware-2026.11.02-140212.bin`，随时可以烧回去对比。
+
+**新设计的取舍**：
+
+| | v1 金属表盘 | v2 极简弧线 |
+|---|---|---|
+| 主要视觉 | 拟物金属层 + 旋转指针 | 中心超大数字 + 外圈进度弧 |
+| 动态元素 | 360×360 指针图层旋转 | 弧线增量 + 数字 label |
+| 素材 | 背景 424KB + 指针 127KB + 轴心 90KB | 只有两张背景 848KB（含昼夜）|
+| 固件大小 | 1.95 MB | 1.73 MB |
+
+去掉指针是有意的：弧线本身就是"指针的轨迹"，视觉信息量一样，但每帧只需重绘
+变化的那一小段弧（几十×几十像素），比 360×360 图层便宜得多。
+
+**实现分工**（关键，改素材前先看这段）：
+
+- **静态层**（`tools/gauge_art_v2.py` 烘焙）：底色、底弧、刻度、刻度数字 0-10 → 两张 466×466 RGB565
+- **动态层**（LVGL 运行时画）：进度弧（`lv_draw_arc`）、中心转速数字（`font_num_112`）、水温（`font_num_40`）
+
+几何常量在 `ui_gauge.c` 顶部和渲染脚本里**各有一份，必须保持一致**：
+半径 194.5 / 弧宽 11 / 起始 -135° / 扫角 270° / 刻度数字半径 165。
+
+**两个坑**：
+
+1. `lv_draw_arc` 的 `radius` 是**外**半径，不是中心线半径。要得到中心线 194.5、宽 11，
+   得传 `radius = 200`。
+2. 圆心和脏区都必须是**屏幕绝对坐标**。翻页动画时整个页面会横向位移，
+   写死 (233,233) 的话弧会钉在屏幕上不跟着页面走。
+   `lv_draw_arc` 内部用 `center ± radius` 当任务区域，`lv_obj_invalidate_area` 也是绝对坐标
+   （内部 `lv_obj_area_is_visible` + `lv_inv_area` 都是屏幕坐标系）。
+
+角度跨 0° 不用自己拆段：`lv_draw_sw_arc.c` 会先对 360 取模，再在
+`lv_draw_sw_mask_angle_init` 里按 `delta_deg = 360 - start + end` 处理跨越。
+
+**性能**：弧每帧只作废扫过的一小段（`invalidate_sweep`），数字变化才 set_text。
+理论上比 v1 更省，实测待补。
+
+### 8.10 数据源：演示模式 + CAN 嗅探状态（2026-11-02）
+
+以前数据源由编译期宏 `USE_FAKE_WHEN_NO_LINK` 决定（默认 0，即没数据就显示 `--`），
+只有一块圆屏时没法看效果。现在换成运行时可切、状态存 NVS，统一走 `datasrc.c`：
+
+| 模式 | 数据来源 | 仪表表现 |
+|---|---|---|
+| 演示模式 **开** | 本地 `fake_source` | 不管发送端在不在，都跑那段 20 秒骑行脚本 |
+| 演示模式 **关** | ESP-NOW 下行 | 没连接时 rpm=0、水温 `--` |
+
+开关在设置页第五张卡片，点一下立即生效（`datasrc_read()` 每帧都看这个标志），不用重启。
+
+**CAN 嗅探状态**是这次的重点，回答的是「发送端收到了，但 OBD 那边到底通没通」：
+
+- 没收到包 → `未知`（灰）
+- 收到包且 `flags & TF_RPM` → `正常`（绿）
+- 收到包但没有 RPM 位 → **`无数据`（琥珀）** ← 发送端在跑、总线没应答
+
+**不需要改协议**：`telemetry_t` 里本来就有 `flags` 位域，每一位代表对应字段本次是否有效。
+「收得到包但没有任何有效字段」本身就等价于「CAN 没读到东西」。
+以后要加别的诊断信息再说，现在这样够用。
+
+设置页「发送端」卡片因此变成两行：上行链路一条、CAN 嗅探一条，两个问题分开回答。
+
+> 顺带一提：发送端的 BOOT 键（按住 800ms）切的是**发送端自己**的模拟数据，
+> 接收端只是照常显示收到的数据，不会有额外的扫屏动作。

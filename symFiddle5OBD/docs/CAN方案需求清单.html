@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三阳飞度5 · CAN 方案软硬件需求清单</title>
+<style>
+:root{
+  --bg:#0e1014; --card:#161a21; --card2:#1c212a; --line:#2a303b;
+  --tx:#e8eaee; --tx2:#9aa3b0; --tx3:#6b7482;
+  --ok:#3ddc97; --warn:#f5a623; --bad:#ef5f5f; --info:#5aa9f5; --acc:#ff8a4c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  font-size:15px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:940px;margin:0 auto;padding:56px 28px 100px}
+header{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:44px}
+.kicker{font-size:12px;letter-spacing:.18em;color:var(--acc);text-transform:uppercase;margin-bottom:14px}
+h1{font-size:30px;font-weight:600;letter-spacing:-.01em;line-height:1.35}
+.sub{color:var(--tx2);margin-top:12px;font-size:14px}
+h2{font-size:19px;font-weight:600;margin:52px 0 18px;padding-left:13px;border-left:3px solid var(--acc);line-height:1.4}
+h3{font-size:15px;font-weight:600;margin:26px 0 10px;color:var(--tx)}
+p{margin:12px 0;color:var(--tx)}
+p.dim{color:var(--tx2)}
+strong{font-weight:600;color:#fff}
+code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:13px;background:var(--card2);padding:2px 6px;border-radius:4px;color:#ffc9a3}
+pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:16px 0}
+pre code{background:none;padding:0;font-size:12.5px;line-height:1.7;color:#c8d0dc;display:block}
+pre .c{color:var(--tx3)}
+
+.verdict{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:30px 0 8px}
+.v{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 16px}
+.v .n{font-size:24px;font-weight:600;line-height:1.15;letter-spacing:-.02em}
+.v .l{font-size:12px;color:var(--tx2);margin-top:8px}
+.v .d{font-size:11.5px;color:var(--tx3);margin-top:3px}
+.g{color:var(--ok)} .y{color:var(--warn)} .r{color:var(--bad)}
+
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:13.5px}
+th{text-align:left;font-weight:500;color:var(--tx2);font-size:12px;letter-spacing:.06em;
+   padding:9px 12px;border-bottom:1px solid var(--line);background:var(--card2)}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.015)}
+td.mono{font-family:ui-monospace,monospace;font-size:12.5px;color:#ffc9a3}
+td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap;font-weight:500}
+.t-ok{background:rgba(61,220,151,.13);color:var(--ok)}
+.t-warn{background:rgba(245,166,35,.13);color:var(--warn)}
+.t-bad{background:rgba(239,95,95,.13);color:var(--bad)}
+.t-info{background:rgba(90,169,245,.13);color:var(--info)}
+.t-gray{background:rgba(154,163,176,.12);color:var(--tx2)}
+
+.note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--acc);
+      border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0}
+.note.danger{border-left-color:var(--bad)}
+.note.good{border-left-color:var(--ok)}
+.note.info{border-left-color:var(--info)}
+.note .h{font-size:13px;font-weight:600;margin-bottom:6px;color:#fff}
+.note p{margin:6px 0;font-size:13.5px;color:var(--tx2)}
+.note p strong{color:var(--tx)}
+
+ol,ul{margin:12px 0 12px 4px;padding-left:22px;color:var(--tx2)}
+li{margin:8px 0}
+li strong{color:var(--tx)}
+
+.flow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:20px 0}
+.flow .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;margin:6px 0}
+.flow .bx{background:var(--card2);border:1px solid var(--line);border-radius:7px;padding:6px 12px;white-space:nowrap;color:var(--tx)}
+.flow .bx.hot{border-color:rgba(255,138,76,.45);color:#ffc9a3}
+.flow .ar{color:var(--tx3);font-size:12px}
+
+footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);
+       font-size:12px;color:var(--tx3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media(max-width:640px){
+  .verdict{grid-template-columns:repeat(2,1fr)}
+  h1{font-size:23px}
+  .wrap{padding:36px 18px 70px}
+  table{font-size:12.5px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">SYM Fiddle 5 · OBD Telemetry</div>
+  <h1>CAN 方案：软硬件整体需求清单</h1>
+  <p class="sub">圆屏走车上前置 USB 取电，本文只设计发送端供电。<strong>协议已实测确认：ISO 15765-4 CAN，11 bit ID，500 kbaud，ECU = ECM-EngineControl（2026-10-31）。</strong></p>
+</header>
+
+<h2>一、系统构成</h2>
+
+<p>整条链路四段，只有第 2、3 段需要你动手做硬件。</p>
+
+<div class="flow">
+  <div class="row">
+    <span class="bx">OBD 16 针</span><span class="ar">→</span>
+    <span class="bx">SN65HVD230</span><span class="ar">→</span>
+    <span class="bx hot">ESP32-S3 开发板</span><span class="ar">→</span>
+    <span class="bx">ESP-NOW</span><span class="ar">→</span>
+    <span class="bx">圆屏 1.75C</span>
+  </div>
+  <div class="row" style="color:var(--tx3);font-size:12px;margin-top:10px">
+    <span>取数：CAN 物理层 + ISO-TP + 标准 PID</span>
+  </div>
+  <div class="row">
+    <span class="bx">车上 12V/ACC</span><span class="ar">→</span>
+    <span class="bx">2A 保险丝</span><span class="ar">→</span>
+    <span class="bx">TVS</span><span class="ar">→</span>
+    <span class="bx hot">5V 3A 降压</span><span class="ar">→</span>
+    <span class="bx">开发板 5V</span>
+  </div>
+  <div class="row" style="color:var(--tx3);font-size:12px;margin-top:10px">
+    <span>供电：仅发送端需要设计</span>
+  </div>
+</div>
+
+<div class="verdict">
+  <div class="v"><div class="n y">¥65–97</div><div class="l">必需件合计</div><div class="d">不含可选与工具</div></div>
+  <div class="v"><div class="n g">~5 ms</div><div class="l">ESP-NOW 单程</div><div class="d">10ms 级刷新</div></div>
+  <div class="v"><div class="n g">4 个</div><div class="l">核心数据项</div><div class="d">转速/水温/里程/运行时长</div></div>
+  <div class="v"><div class="n y">1.5 mA</div><div class="l">整机待机电流</div><div class="d">深睡 + 低静态降压</div></div>
+</div>
+
+<h2>二、硬件清单（发送端）</h2>
+
+<h3>必需件</h3>
+
+<table>
+  <tr><th style="width:6%">#</th><th style="width:20%">物料</th><th style="width:32%">规格</th><th style="width:6%">数量</th><th style="width:10%">单价</th><th>备注</th></tr>
+  <tr><td class="mono">1</td><td><strong>CAN 收发器</strong></td><td>SN65HVD230 <strong>模块</strong>，3.3V 版，带终端电阻跳线</td><td class="num">1</td><td class="mono">¥8–15</td><td>买模块不买裸片，SOIC-8 手焊痛苦</td></tr>
+  <tr><td class="mono">2</td><td><strong>OBD-II 公头</strong></td><td>J1962 16 针公头带 30cm 尾线，<strong>90° 弯头</strong></td><td class="num">1</td><td class="mono">¥15–25</td><td>弯头省 3–4cm 垂直空间，坐桶里很关键</td></tr>
+  <tr><td class="mono">3</td><td><strong>降压模块</strong></td><td>9–36V 输入 → 5V 3A，防水壳，静态电流 &lt;1mA</td><td class="num">1</td><td class="mono">¥15–30</td><td>MP1584EN / MP2338 / 车规成品</td></tr>
+  <tr><td class="mono">4</td><td><strong>保险丝</strong></td><td>2A 片式保险 + 带线保险座</td><td class="num">1</td><td class="mono">¥5</td><td>装在 12V 进线正极，不能省</td></tr>
+  <tr><td class="mono">5</td><td><strong>TVS 管</strong></td><td>SMBJ18A（单向）</td><td class="num">2</td><td class="mono">¥2</td><td>并联在 12V 进线对地，吸收点火尖峰</td></tr>
+  <tr><td class="mono">6</td><td><strong>线材</strong></td><td>20AWG 硅胶线，红/黑/黄/绿 各 1m</td><td class="num">1</td><td class="mono">¥10</td><td>硅胶线耐温、柔软，适合车内布线</td></tr>
+  <tr><td class="mono">7</td><td><strong>防护耗材</strong></td><td>φ3–8 热缩管、704 硅胶、扎带</td><td class="num">1</td><td class="mono">¥10</td><td>焊点全部热缩，模块灌胶</td></tr>
+  <tr><td colspan="4" style="text-align:right;color:var(--tx2)">必需件合计</td><td class="mono" colspan="2" style="color:var(--ok);font-weight:600">¥65–97</td></tr>
+</table>
+
+<h3>建议件</h3>
+
+<table>
+  <tr><th style="width:6%">#</th><th style="width:22%">物料</th><th style="width:30%">规格</th><th style="width:10%">单价</th><th>为什么建议</th></tr>
+  <tr><td class="mono">8</td><td>OBD 一分二 Y 线</td><td>16 针公 → 双母，20cm</td><td class="mono">¥20</td><td>调试期能同时插 ELM327 和自制板对照，CAN 是多节点总线，多挂一个不影响</td></tr>
+  <tr><td class="mono">9</td><td>USB-CAN 分析仪</td><td>candleLight 固件，Linux 免驱</td><td class="mono">¥40</td><td><code>candump can0</code> 直接看原始帧，逆向时比 ESP32 打 log 快十倍</td></tr>
+  <tr><td class="mono">10</td><td>ACC 取电线</td><td>保险盒取电器 + 2A 保险</td><td class="mono">¥10</td><td>若最终决定不从 16 脚取常电，这是最正规的取电方式</td></tr>
+  <tr><td class="mono">11</td><td>铁氧体磁环</td><td>φ5 卡扣式</td><td class="mono">¥3</td><td>套在 12V 进线，抑制点火干扰导致的复位</td></tr>
+  <tr><td class="mono">12</td><td>圆屏 Type-C 短线</td><td>90° 弯头，30cm，防水</td><td class="mono">¥10</td><td>车把位置有限，直头会顶到；接口朝上会积水</td></tr>
+</table>
+
+<h3>明确不要买</h3>
+
+<table>
+  <tr><th style="width:26%">物料</th><th>原因</th></tr>
+  <tr><td><strong>MCP2515 模块</strong></td><td>SPI 转 CAN 的独立控制器。ESP32-S3 <strong>自带 TWAI 控制器</strong>，再加一颗纯属重复，还多占 SPI 口</td></tr>
+  <tr><td><strong>TJA1050 / TJA1051</strong></td><td>5V 器件，RXD 输出摆到 5V 会灌坏 ESP32 的 3.3V 引脚</td></tr>
+  <tr><td><strong>120Ω 终端电阻</strong></td><td>车端总线两端已有终端，你是第三个节点。加一只会让负载偏重、差分幅值下降。<strong>只有通信不稳时才试加</strong></td></tr>
+  <tr><td><strong>杜邦线（直插 OBD）</strong></td><td>0.64mm 方针插 1.5mm 车规端子，接触面太小。震动会断续，还可能滑位<strong>短路到 16 脚常电</strong></td></tr>
+  <tr><td><strong>LM2596 降压模块</strong></td><td>静态电流 5–10mA、效率 70–80%、体积大。它自己就把深度睡眠省的电压回去了</td></tr>
+</table>
+
+<h2>三、发送端供电设计</h2>
+
+<p>这是唯一需要设计的部分。三个取电点各有代价：</p>
+
+<table>
+  <tr><th style="width:22%">取电点</th><th style="width:14%">便利度</th><th style="width:14%">待机功耗</th><th>说明</th></tr>
+  <tr>
+    <td><strong>OBD 16 脚</strong><br><span class="tag t-ok">推荐</span></td>
+    <td>最高<br><span style="color:var(--tx3);font-size:12px">插头就在旁边</span></td>
+    <td>需靠固件压<br><span style="color:var(--tx3);font-size:12px">1.5mA 以内</span></td>
+    <td>电瓶常电，一直有电。不用在车身上找线、不用破线，插上就有。<strong>代价是必须做深度睡眠</strong>，否则一周耗干电瓶。</td>
+  </tr>
+  <tr>
+    <td><strong>ACC 开关电</strong></td>
+    <td>中<br><span style="color:var(--tx3);font-size:12px">需找线并取电</span></td>
+    <td>零<br><span style="color:var(--tx3);font-size:12px">熄火即断电</span></td>
+    <td>最彻底，从根上不存在耗电问题。代价是要拆侧板找 ACC 线，或用保险盒取电器。</td>
+  </tr>
+  <tr>
+    <td><strong>前置 USB 分一路</strong></td>
+    <td>低<br><span style="color:var(--tx3);font-size:12px">线要拉 1m+</span></td>
+    <td>零</td>
+    <td>5V 直供，<strong>理论上可以完全省掉降压模块</strong>。但 USB 口电流预算有限（圆屏已占用），且要拉长线到坐桶，压降和干扰都变差。</td>
+  </tr>
+</table>
+
+<div class="note">
+  <div class="h">建议：先按 16 脚取电做</div>
+  <p>插头旁边就有 12V，最省事、不破坏原车线束。前提是<strong>固件里必须实现深度睡眠</strong>——这一条是硬要求，不是优化项。</p>
+  <p>如果后来发现长期停放（一个月以上不骑）电压掉得明显，再改接 ACC，硬件只多一根线。</p>
+</div>
+
+<h3>电流预算</h3>
+
+<table>
+  <tr><th style="width:32%">工况</th><th style="width:20%">5V 侧电流</th><th style="width:22%">12V 侧折算</th><th>说明</th></tr>
+  <tr><td>ESP-NOW 发射瞬间</td><td class="mono">~240 mA</td><td class="mono">~118 mA</td><td>峰值，持续几百 µs，模块要能扛住</td></tr>
+  <tr><td>正常运行平均</td><td class="mono">~120 mA</td><td class="mono">~59 mA</td><td>含收发器、降压损耗（按 85% 效率）</td></tr>
+  <tr><td><strong>深度睡眠</strong></td><td class="mono">~1.5 mA</td><td class="mono">~1.5 mA</td><td>ESP32-S3 深睡 7µA + 降压静态 &lt;1mA + 收发器待机</td></tr>
+</table>
+
+<p class="dim">按 1.5mA 待机算，7Ah 电瓶理论上能撑约 <strong>190 天</strong>。但电瓶自放电和车上原有暗电流也在耗，实际留足余量按 1–2 个月评估。这个数字足以支撑"先按 16 脚取电"的选择。</p>
+
+<h3>深睡的两种唤醒方式</h3>
+
+<table>
+  <tr><th style="width:24%">方式</th><th style="width:14%">唤醒延迟</th><th style="width:14%">实现难度</th><th>说明</th></tr>
+  <tr>
+    <td><strong>定时唤醒</strong><br><span class="tag t-ok">推荐</span></td>
+    <td>最长 5 分钟</td>
+    <td>低</td>
+    <td>每 5 分钟醒 2 秒，检查总线上有没有帧；有就留在运行态，没有就继续睡。平均电流增加约 0.8mA。<strong>不用改硬件，纯固件。</strong></td>
+  </tr>
+  <tr>
+    <td><strong>CAN 活动唤醒</strong></td>
+    <td>几乎即时</td>
+    <td>中</td>
+    <td>把收发器的 RXD 接到支持 GPIO 唤醒的引脚，总线一有跳变就醒。问题是<strong>收发器待机时也要供电</strong>，静态电流压不下去，实际比定时唤醒更费电。</td>
+  </tr>
+</table>
+
+<div class="note warn">
+  <div class="h">一个容易忽略的细节</div>
+  <p>钥匙拧到 ON 但没启动时，ECU 通常已经在总线上发帧了——所以定时唤醒能正常工作。<strong>但如果 ECU 在熄火后完全不发帧，总线上一个字节都没有，任何"看总线活动"的判断都会超时。</strong>这是正常的，超时就继续睡，不要当成故障。</p>
+</div>
+
+<h2>四、接线表</h2>
+
+<h3>CAN 部分</h3>
+
+<table>
+  <tr><th style="width:30%">从</th><th style="width:30%">到</th><th>说明</th></tr>
+  <tr><td>OBD <strong>6 脚</strong>（CAN-H）</td><td>SN65HVD230 <strong>7 脚</strong> CANH</td><td>必须与 CAN-L <strong>双绞</strong></td></tr>
+  <tr><td>OBD <strong>14 脚</strong>（CAN-L）</td><td>SN65HVD230 <strong>6 脚</strong> CANL</td><td>同上</td></tr>
+  <tr><td>OBD <strong>4 或 5 脚</strong>（地）</td><td>SN65HVD230 2 脚 GND + 降压 IN−</td><td>单点共地，不要多处接地形成地环</td></tr>
+  <tr><td>SN65HVD230 <strong>1 脚</strong> D</td><td>ESP32-S3 <strong>GPIO4</strong>（TWAI_TX）</td><td>引脚可换，代码里同步改</td></tr>
+  <tr><td>SN65HVD230 <strong>4 脚</strong> RXD</td><td>ESP32-S3 <strong>GPIO5</strong>（TWAI_RX）</td><td>同上</td></tr>
+  <tr><td>SN65HVD230 <strong>3 脚</strong> VCC</td><td>开发板 <strong>3V3</strong></td><td>3.3V，不要接 5V</td></tr>
+  <tr><td>SN65HVD230 <strong>8 脚</strong> RS</td><td><strong>GND</strong></td><td>接低 = 高速模式，不接会进待机</td></tr>
+  <tr><td>SN65HVD230 <strong>5 脚</strong> Vref</td><td><strong>悬空</strong></td><td>仅做参考输出，不接线</td></tr>
+</table>
+
+<h3>供电部分</h3>
+
+<table>
+  <tr><th style="width:30%">从</th><th style="width:30%">到</th><th>说明</th></tr>
+  <tr><td>OBD <strong>16 脚</strong>（+12V 常电）</td><td><strong>2A 保险丝</strong> → 降压 IN+</td><td>保险丝串在正极，尽量靠近插头</td></tr>
+  <tr><td>降压 IN+ ↔ IN−</td><td><strong>SMBJ18A TVS</strong>（反向并联）</td><td>阴极接 +12V，阳极接 GND</td></tr>
+  <tr><td>降压 <strong>OUT+</strong>（5V）</td><td>开发板 <strong>5V</strong> 脚</td><td>不要接 3V3 脚，会绕过板载稳压</td></tr>
+  <tr><td>降压 <strong>OUT−</strong></td><td>开发板 <strong>GND</strong></td><td>与 CAN 地同一节点</td></tr>
+</table>
+
+<div class="note danger">
+  <div class="h">两个必须注意的地方</div>
+  <p><strong>不要同时插 USB 和 12V。</strong>开发板 USB 供电和 5V 脚之间多数只有一只肖特基二极管，倒灌风险取决于具体板子。调试时拔掉 12V，或者干脆调试阶段只用 USB 供电（此时不需要降压模块）。</p>
+  <p><strong>改动前断开电瓶负极。</strong>OBD 的 16 脚是常电，插头插着的时候整条线都是活的，剪线钳一碰车架就是短路。</p>
+</div>
+
+<h2>五、软件栈</h2>
+
+<h3>发送端（ESP32-S3 N16R8）</h3>
+
+<p>框架 ESP-IDF <strong>5.5</strong>，纯 C，无 RTOS 之外的高级框架。按职责拆成七个模块：</p>
+
+<table>
+  <tr><th style="width:18%">模块</th><th style="width:30%">职责</th><th>要点</th></tr>
+  <tr><td class="mono">can_link</td><td>TWAI 初始化与错误恢复</td><td>500 kbps，11-bit ID，只收 <code>0x7E8–0x7EF</code>。必须实现 <strong>bus-off 自动恢复</strong>，否则一次干扰就永久静默</td></tr>
+  <tr><td class="mono">isotp</td><td>ISO 15765-2 拆包</td><td>单帧（SF）必做；多帧（FF + CF 流控）也要做——读 VIN 或一次性请求多个 PID 时会用到</td></tr>
+  <tr><td class="mono">obd_poll</td><td>PID 轮询调度</td><td>按频率分档：快项 10Hz、慢项 1–2Hz。<strong>请求间隔 20–50ms</strong>，太快 ECU 会丢帧</td></tr>
+  <tr><td class="mono">decode</td><td>PID 公式解码</td><td>查表实现，见第六节</td></tr>
+  <tr><td class="mono">filter</td><td>数值平滑</td><td>转速用中值滤波去尖峰，水温用 EMA 慢跟踪</td></tr>
+  <tr><td class="mono">odo</td><td>里程与清码补偿</td><td>消费 PID 0x31；检测回落并把差额记进 offset，保证显示值单调不减；每 1 km 写一次 NVS</td></tr>
+  <tr><td class="mono">runtime</td><td>运行时长计时</td><td>仅在总线活跃（ECU 上电）时累加；每 30 分钟写一次 NVS，掉电最多丢 30 分钟</td></tr>
+  <tr><td class="mono">uplink</td><td>ESP-NOW 打包发送</td><td>广播地址，无需配对；20Hz 上限，实际 10Hz 够用</td></tr>
+  <tr><td class="mono">power</td><td>睡眠管理</td><td>无总线活动 60s 进深睡；定时 5 分钟唤醒探测</td></tr>
+</table>
+
+<h3>接收端（圆屏 1.75C）</h3>
+
+<table>
+  <tr><th style="width:18%">模块</th><th style="width:30%">职责</th><th>要点</th></tr>
+  <tr><td class="mono">espnow_rx</td><td>收包与校验</td><td>丢包用 <code>seq</code> 判断；连续 2s 无包在界面打"信号丢失"</td></tr>
+  <tr><td class="mono">ui</td><td>LVGL 9 界面</td><td>转速圆弧 30fps，数字 5Hz 局部刷新。刷新缓冲约 40 行 ≈37KB 放内部 RAM</td></tr>
+  <tr><td class="mono">storage</td><td>NVS 读写</td><td>存里程基数、亮度、主题</td></tr>
+  <tr><td class="mono">power</td><td>亮度与防烧屏</td><td>静止 5 分钟降亮度；静止 30 分钟熄屏；长时间静止做像素偏移</td></tr>
+</table>
+
+<p class="dim">圆屏的驱动用微雪官方托管组件 <code>esp32_s3_touch_amoled_1_75c</code>，不要自己写 CO5300 的 QSPI 初始化——那个时序很折磨人。</p>
+
+<h3>无线协议</h3>
+
+<p>ESP-NOW 单包载荷上限 250 字节，这个结构体 23 字节，足够。注意是 <strong>v2</strong>：车速已移除，换为运行分钟数，接收端必须同步：</p>
+
+<pre><code><span class="c">// 发送端与接收端共用的头文件 common/telemetry.h</span>
+typedef struct __attribute__((packed)) {
+    uint16_t rpm;        <span class="c">// 发动机转速，0–12000</span>
+    int8_t   coolant;    <span class="c">// 水温 °C，-40–125</span>
+    int8_t   intake;     <span class="c">// 进气温度 °C</span>
+    uint8_t  tps;        <span class="c">// 节气门开度 %</span>
+    uint8_t  fuel;       <span class="c">// 油量 %，不支持时置 0xFF</span>
+    uint16_t volt_dv;    <span class="c">// 系统电压，单位 0.1V</span>
+    uint16_t run_min;    <span class="c">// 发动机累计运行分钟，饱和 65535</span>
+    uint32_t odo_dam;    <span class="c">// 里程，单位 0.1km（源 = PID 0x31，已做清码补偿）</span>
+    uint16_t flags;      <span class="c">// TF_RPM / TF_COOLANT / ... / TF_ODO</span>
+    uint32_t seq;        <span class="c">// 递增序号，用于丢包判断</span>
+} telemetry_t;</code></pre>
+
+<p class="dim"><code>flags</code> 是必须的：某项读不到时接收端要显示 <code>--</code> 而不是显示 0，否则骑手会以为是真实数据。</p>
+
+<h2>六、数据项与 PID 映射</h2>
+
+<table>
+  <tr><th style="width:16%">参数</th><th style="width:10%">PID</th><th style="width:20%">解码公式</th><th style="width:8%">单位</th><th style="width:10%">轮询频率</th><th>可得性</th></tr>
+  <tr><td><strong>发动机转速</strong></td><td class="mono">0x0C</td><td class="mono">((A&lt;&lt;8)|B)/4</td><td>rpm</td><td class="mono">10 Hz</td><td><span class="tag t-ok">极高</span></td></tr>
+  <tr><td><strong>冷却液温度</strong></td><td class="mono">0x05</td><td class="mono">A − 40</td><td>°C</td><td class="mono">2 Hz</td><td><span class="tag t-ok">极高</span></td></tr>
+  <tr><td><s>车速</s></td><td class="mono">0x0D</td><td class="mono">A</td><td>km/h</td><td class="mono">—</td><td><span class="tag t-bad">恒 0</span> <strong>有应答但恒返 0</strong>，轮速未进 ECU。不轮询</td></tr>
+  <tr><td>节气门开度</td><td class="mono">0x11</td><td class="mono">A × 100 / 255</td><td>%</td><td class="mono">2 Hz</td><td><span class="tag t-ok">高</span></td></tr>
+  <tr><td>进气温度</td><td class="mono">0x0F</td><td class="mono">A − 40</td><td>°C</td><td class="mono">1 Hz</td><td><span class="tag t-ok">高</span></td></tr>
+  <tr><td>系统电压</td><td class="mono">0x42</td><td class="mono">((A&lt;&lt;8)|B)/1000</td><td>V</td><td class="mono">1 Hz</td><td><span class="tag t-bad">实测无</span> App 未列出。要显示电压得硬件分压进 ADC</td></tr>
+  <tr><td>油量</td><td class="mono">0x2F</td><td class="mono">A × 100 / 255</td><td>%</td><td class="mono">0.5 Hz</td><td><span class="tag t-bad">低</span> 踏板车多为浮子直连仪表</td></tr>
+  <tr><td><strong>清码后行驶距离</strong></td><td class="mono">0x31</td><td class="mono">((A&lt;&lt;8)|B)</td><td>km</td><td class="mono">5 s</td><td><span class="tag t-ok">已实测</span> 11582 km，<strong>里程主源</strong></td></tr>
+</table>
+
+<div class="note good">
+  <div class="h">关于里程：0x31 救回来了</div>
+  <p>标准 OBD-II 确实没有「总里程」PID，但有一个 <strong>0x31「Distance traveled since codes cleared」</strong>——本车实测返回 <strong>11582 km</strong>，与表显里程同一量级。只要不清故障码，它就等于里程，对保养提醒完全够用。</p>
+  <p><strong>唯一的坑：清码会归零。</strong>直接透传的话，某天清了码里程就从 11582 跳成 1，比不显示更糟。固件里用 offset 补偿：检测到显著回落（> 50 km）时把差额记进 NVS，显示值继续单调上升。</p>
+  <p>降级路径：若 0x31 不被支持，改试非标准 <code>0xA6</code>；两者都不行就置位不显示，界面显示 <code>--</code>。</p>
+</div>
+
+<h3>轮询时序</h3>
+
+<pre><code><span class="c">// 请求：功能寻址，所有 ECU 都听</span>
+TX  ID=0x7DF  DLC=8  <span class="c">02 01 0C 00 00 00 00 00</span>
+<span class="c">// 响应：发动机 ECU</span>
+RX  ID=0x7E8  DLC=8  <span class="c">04 41 0C 1A F8 00 00 00</span>
+<span class="c">// RPM = 0x1AF8 / 4 = 1726</span>
+
+<span class="c">// 如果功能寻址没人应答，改物理寻址（发动机 ECU）</span>
+TX  ID=0x7E0  DLC=8  <span class="c">02 01 0D 00 00 00 00 00</span>
+RX  ID=0x7E8  DLC=8  <span class="c">03 41 0D 3C 00 00 00 00</span>
+<span class="c">// 车速 = 0x3C = 60 km/h</span></code></pre>
+
+<h2>七、开发环境与工程结构</h2>
+
+<pre><code>symFiddle5OBD/
+├── firmware/
+│   ├── sender/              <span class="c"># ESP32-S3 N16R8，发送端</span>
+│   │   ├── main/
+│   │   │   ├── can_link.c   <span class="c"># TWAI 初始化 + 错误恢复</span>
+│   │   │   ├── isotp.c
+│   │   │   ├── obd_poll.c
+│   │   │   ├── decode.c
+│   │   │   ├── odo.c           <span class="c"># 里程（0x31）+ 清码补偿</span>
+│   │   │   ├── runtime.c       <span class="c"># 运行时长</span>
+│   │   │   ├── uplink.c     <span class="c"># ESP-NOW</span>
+│   │   │   └── power.c
+│   │   └── sdkconfig
+│   ├── receiver/            <span class="c"># 圆屏 1.75C，接收端</span>
+│   │   ├── main/
+│   │   │   ├── espnow_rx.c
+│   │   │   ├── ui.c         <span class="c"># LVGL 9 界面</span>
+│   │   │   └── power.c
+│   │   └── sdkconfig
+│   └── common/
+│       └── telemetry.h      <span class="c"># 两端共享的协议定义</span>
+├── tools/
+│   └── can_sniff/           <span class="c"># 开发板刷成 CAN 抓包器，USB 串口输出</span>
+└── docs/</code></pre>
+
+<table>
+  <tr><th style="width:24%">项</th><th style="width:22%">选择</th><th>说明</th></tr>
+  <tr><td>工具链</td><td>ESP-IDF 5.5</td><td>发送端用 5.1+ 就够，但圆屏组件要求 5.5，统一版本少踩坑</td></tr>
+  <tr><td>构建</td><td class="mono">idf.py build flash monitor</td><td>两个工程独立，共用一个 <code>common/</code> 目录</td></tr>
+  <tr><td>图形库</td><td>LVGL 9.2+</td><td>用 IDF Component Manager 拉，不用手动移植</td></tr>
+  <tr><td>调试</td><td>USB 串口 log + 可选 CAN 抓包固件</td><td>发送端 USB 口打日志；抓包固件把原始帧十六进制打到串口</td></tr>
+</table>
+
+<h2>八、成本汇总</h2>
+
+<table>
+  <tr><th style="width:40%">配置</th><th style="width:20%">金额</th><th>包含</th></tr>
+  <tr><td>最小可用</td><td class="mono" style="color:var(--ok);font-weight:600">¥65–97</td><td>必需件 7 项</td></tr>
+  <tr><td>推荐配置</td><td class="mono" style="color:var(--warn);font-weight:600">¥98–140</td><td>+ OBD 一分二 Y 线、USB-CAN 分析仪、磁环</td></tr>
+  <tr><td>完整配置</td><td class="mono" style="color:var(--tx2);font-weight:600">¥118–170</td><td>+ ACC 取电线、圆屏 Type-C 短线</td></tr>
+</table>
+
+<p class="dim">不含已有硬件（圆屏、开发板、ELM327）与工具（万用表、烙铁、压线钳）。</p>
+
+<h2>九、待确认项与风险</h2>
+
+<table>
+  <tr><th style="width:34%">项目</th><th style="width:14%">影响</th><th>怎么确认 / 怎么兜底</th></tr>
+  <tr><td><strong>协议是否 ISO 15765-4 / 500k</strong></td><td><span class="tag t-ok">已确认</span></td><td>ELM327 + Car Scanner 实测：<code>ISO 15765-4 CAN (11 bit ID, 500 kbaud)</code>，ECU 名 <code>ECM-EngineControl</code>，握手正常。本清单直接适用</td></tr>
+  <tr><td>功能寻址是否被响应</td><td><span class="tag t-warn">中</span></td><td>很多 ECU 忽略 <code>0x7DF</code>，只答物理地址 <code>0x7E0</code>。固件里做成超时自动切换，不要写死</td></tr>
+  <tr><td><s>车速 PID 是否有效</s></td><td><span class="tag t-bad">已排除</span></td><td>实测 <code>01 0D</code> 无响应。转前轮仪表动、手机不动 → 轮速信号直连仪表。<strong>项目不再处理车速</strong>，也不做轮速旁路</td></tr>
+  <tr><td>前置 USB 口电流</td><td><span class="tag t-warn">中</span></td><td>确认是 5V/1A 以上。圆屏峰值约 0.5A，若同时充手机可能不够</td></tr>
+  <tr><td>前置 USB 是否 ACC 断电</td><td><span class="tag t-info">低</span></td><td>熄火后断电最理想。若是常电，圆屏会一直亮，需要固件里做无数据熄屏</td></tr>
+  <tr><td>震动导致焊点开裂</td><td><span class="tag t-warn">中</span></td><td>USB 座热熔胶固定、排针改焊接、模块灌 704 胶、线束留应力环</td></tr>
+  <tr><td>总线错误 / 干扰</td><td><span class="tag t-warn">中</span></td><td>TWAI 开 bus-off 自动恢复；12V 进线套磁环；CANH/CANL 全程双绞</td></tr>
+</table>
+
+<div class="note good">
+  <div class="h">一句话总结</div>
+  <p>硬件只有 <strong>5 颗器件 + 一根插头线</strong>，软件是 <strong>两个 ESP-IDF 工程 + 一个共享头文件</strong>。真正的难点不在代码量，而在<strong>协议确认</strong>和<strong>供电可靠性</strong>这两件事上——这两件做对了，剩下的是按部就班。</p>
+</div>
+
+<footer>
+  <span>三阳飞度5 · CAN 方案需求清单 · v1.0 · 2026-10-30</span>
+  <span>配套文档：可行性分析报告.html</span>
+</footer>
+
+</div>
+</body>
+</html>
