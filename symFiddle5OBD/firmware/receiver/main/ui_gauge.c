@@ -54,23 +54,39 @@ static bool     s_first = true;
 static bool     s_visible = true;
 
 /* ---------- 颜色 ---------- */
-static lv_color_t arc_color(float frac)
+/* 弧的颜色由**角度位置**决定（pos = 0..1 沿弧的位置），不是由当前转速决定。
+ *
+ * 这一点很关键：弧是增量重绘的，每帧只重画变化的那一小段。
+ * 如果颜色跟着"当前转速"走，升转过程中每段用的都是当时的颜色，
+ * 弧上就会留下历史颜色的残影（低转画的绿 + 中转画的黄 + 高转画的橙堆在一起）；
+ * 降转时剩余部分又不重画，颜色就定格在旧值上 —— 看着像"没刷新"。
+ *
+ * 改成按位置取色后，同一位置永远是同一个颜色，重绘哪段都不影响别处；
+ * 转速跌落时脏区重绘会自动露出背景里的底弧，不需要额外的"擦除"逻辑。 */
+static lv_color_t arc_color_at(float pos)
 {
     static const uint8_t LO[3]  = {0x2E, 0xE5, 0x9D};   /* 绿 */
     static const uint8_t MID[3] = {0xF5, 0xC5, 0x42};   /* 黄 */
     static const uint8_t HI[3]  = {0xF0, 0x50, 0x3C};   /* 红 */
 
+    if (pos < 0.0f) {
+        pos = 0.0f;
+    }
+    if (pos > 1.0f) {
+        pos = 1.0f;
+    }
+
     const uint8_t *a;
     const uint8_t *b;
     float t;
-    if (frac <= 0.5f) {
+    if (pos <= 0.5f) {
         a = LO;
         b = MID;
-        t = frac * 2.0f;
+        t = pos * 2.0f;
     } else {
         a = MID;
         b = HI;
-        t = (frac - 0.5f) * 2.0f;
+        t = (pos - 0.5f) * 2.0f;
     }
     uint8_t r  = (uint8_t)(a[0] + (b[0] - a[0]) * t + 0.5f);
     uint8_t g  = (uint8_t)(a[1] + (b[1] - a[1]) * t + 0.5f);
@@ -90,6 +106,11 @@ static lv_color_t temp_color(int8_t c)
 }
 
 /* ---------- 进度弧（自绘） ---------- */
+/* 弧按位置分段绘制：每 1000 rpm 一段（正好和刻度数字 0-10 对齐），
+ * 段内单色，整条弧看起来就是随位置渐变的。
+ * 段边界用同一个整数角度，所以相邻段严丝合缝，不会露缝。 */
+#define ARC_SEGS     10
+
 static void arc_draw_cb(lv_event_t *e)
 {
     lv_layer_t *layer = lv_event_get_layer(e);
@@ -108,24 +129,42 @@ static void arc_draw_cb(lv_event_t *e)
     lv_area_t coords;
     lv_obj_get_coords(obj, &coords);
 
-    lv_draw_arc_dsc_t dsc;
-    lv_draw_arc_dsc_init(&dsc);
-    dsc.center.x = coords.x1 + (int32_t)CX;
-    dsc.center.y = coords.y1 + (int32_t)CY;
-    dsc.radius = ARC_R_OUT;
-    dsc.width = ARC_W;
-    dsc.color = arc_color(frac);
-    dsc.opa = LV_OPA_COVER;
-    dsc.rounded = 1;
     /* 角度换算：我们的 θ 是「12 点为 0、顺时针」，LVGL 的 a 是「3 点为 0、顺时针」。
-     * 两者同一个点：x = CX + r·sinθ = CX + r·cos a，y = CY - r·cosθ = CY + r·sin a
+     * 两者指同一个点：x = CX + r·sinθ = CX + r·cos a，y = CY - r·cosθ = CY + r·sin a
      * → a = θ - 90。
-     * 起始 θ = -135°（左下 7:30）→ a = -225° ≡ **135°**。
-     * （早先写成 315°，等于把整条弧顺时针转了 180°，起点跑到左上 10:30 去了。）*/
-    dsc.start_angle = 135;
-    dsc.end_angle = 135 + (int32_t)(ANG_SPAN * frac);
+     * 起始 θ = -135°（左下 7:30）→ a = -225° ≡ **135°**。 */
+    const int32_t a_start = 135;
 
-    lv_draw_arc(layer, &dsc);
+    int segs = (int)(frac * ARC_SEGS + 0.999f);
+    if (segs < 1) {
+        segs = 1;
+    }
+
+    for (int i = 0; i < segs; i++) {
+        float p0 = (float)i / (float)ARC_SEGS;
+        float p1 = (float)(i + 1) / (float)ARC_SEGS;
+        if (p1 > frac) {
+            p1 = frac;
+        }
+        if (p1 - p0 < 0.001f) {
+            continue;
+        }
+
+        lv_draw_arc_dsc_t dsc;
+        lv_draw_arc_dsc_init(&dsc);
+        dsc.center.x = coords.x1 + (int32_t)CX;
+        dsc.center.y = coords.y1 + (int32_t)CY;
+        dsc.radius = ARC_R_OUT;
+        dsc.width = ARC_W;
+        dsc.color = arc_color_at((p0 + p1) * 0.5f);   /* 用段中点的位置取色 */
+        dsc.opa = LV_OPA_COVER;
+        /* 只在整条弧的两个端头做圆头，中间段用方头，否则每个接缝都会鼓起一个圆点 */
+        dsc.rounded = (i == 0) || (p1 >= frac - 0.0001f);
+        dsc.start_angle = a_start + (int32_t)(ANG_SPAN * p0);
+        dsc.end_angle   = a_start + (int32_t)(ANG_SPAN * p1);
+
+        lv_draw_arc(layer, &dsc);
+    }
 }
 
 /* 只作废「弧从 f0 走到 f1」扫过的那一带。

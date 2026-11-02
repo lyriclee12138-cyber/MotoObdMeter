@@ -151,10 +151,12 @@ static lv_obj_t *mk_btn(lv_obj_t *parent, int x, const char *txt, ui_theme_t t, 
 {
     lv_obj_t *b = lv_obj_create(parent);
     lv_obj_remove_style_all(b);
-    /* 垂直居中要按**父卡片的实际高度**算，不能写死某个卡片的宏：
-     * 发送端卡片加高到 96 之后，写死 (CARD2_H-42)/2 会让主题按钮在 60 高的卡片里溢出 9px。 */
-    lv_obj_set_pos(b, x, (lv_obj_get_height(parent) - 42) / 2);
     lv_obj_set_size(b, 76, 42);
+    /* 用 align 定位，不要自己算 y：
+     * lv_obj_get_height() 读的是布局后的 coords，父卡片刚 set_size 完还没布局，
+     * 这时它返回 0 —— 上一版因此算出 y = (0-42)/2 = -21，把按钮顶到卡片外面，
+     * 只剩下半截露出来。align 是相对定位，由布局阶段解析，不依赖当前 coords。 */
+    lv_obj_align(b, LV_ALIGN_LEFT_MID, x, 0);
     lv_obj_set_style_radius(b, 21, 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_set_scrollable(b, false);

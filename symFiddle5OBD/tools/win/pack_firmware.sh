@@ -66,10 +66,38 @@ build_one() {
     iconv -f GBK -t UTF-8 /tmp/pack_${proj}.log 2>/dev/null | grep -aE "${proj}.bin binary size" | head -1
 
     echo "== 合并 $proj =="
-    "$ROOT/tools/win/idf.bat" -B "$dir/build" -C "$dir" merge-bin -o "${proj}_merged.bin" > /tmp/pack_merge.log 2>&1
+    local merged="$dir/build/${proj}_merged.bin"
+    local mlog="/tmp/pack_merge_${proj}.log"
+    # 先删掉旧产物：合并要是有问题没生成新文件，下面立刻就能发现，
+    # 而不是像以前那样把上一版悄悄拷出去（踩过一次，full.bin 是旧的）。
+    rm -f "$merged"
+    if ! "$ROOT/tools/win/idf.bat" -B "$dir/build" -C "$dir" merge-bin -o "${proj}_merged.bin" > "$mlog" 2>&1; then
+        echo "!! $proj 合并失败"
+        iconv -f GBK -t UTF-8 "$mlog" 2>/dev/null | tail -12
+        exit 1
+    fi
+    if [ ! -f "$merged" ]; then
+        echo "!! $proj 没有生成合并产物：$merged"
+        iconv -f GBK -t UTF-8 "$mlog" 2>/dev/null | tail -12
+        exit 1
+    fi
 
-    cp "$dir/build/${proj}_merged.bin" "$OUT/${name}_full.bin"
-    cp "$dir/build/${proj}.bin"       "$OUT/${name}_app.bin"
+    cp "$merged" "$OUT/${name}_full.bin"
+    cp "$dir/build/${proj}.bin" "$OUT/${name}_app.bin"
+
+    # 最后一道校验：full 里 0x10000 开始必须就是刚编出来的那份 app。
+    # 这一条能挡住"合并用了旧产物"这类静默错误——它不会报错，只会让你烧到旧固件。
+    if ! python - "$OUT/${name}_full.bin" "$OUT/${name}_app.bin" <<'PY'
+import sys
+full = open(sys.argv[1], 'rb').read()
+app = open(sys.argv[2], 'rb').read()
+seg = full[0x10000:0x10000 + len(app)]
+sys.exit(0 if seg == app else 1)
+PY
+    then
+        echo "!! ${name}_full.bin 里的应用区与 app.bin 不一致，合并产物可能是旧的"
+        exit 1
+    fi
 }
 
 if [ "$WHICH" = "receiver" ] || [ "$WHICH" = "both" ]; then
