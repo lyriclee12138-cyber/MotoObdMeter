@@ -117,11 +117,13 @@ static void arc_draw_cb(lv_event_t *e)
     dsc.color = arc_color(frac);
     dsc.opa = LV_OPA_COVER;
     dsc.rounded = 1;
-    /* LVGL 的角度 0° 在 3 点方向、顺时针；我们的 0° 在 12 点，所以整体 +90。
-     * 起始 -135° → 315°。end 允许超过 360，底层会取模后按"跨过 0°"处理
-     * （lv_draw_sw_mask_angle_init 里 delta_deg = 360 - start + end）。 */
-    dsc.start_angle = 315;
-    dsc.end_angle = 315 + (int32_t)(ANG_SPAN * frac);
+    /* 角度换算：我们的 θ 是「12 点为 0、顺时针」，LVGL 的 a 是「3 点为 0、顺时针」。
+     * 两者同一个点：x = CX + r·sinθ = CX + r·cos a，y = CY - r·cosθ = CY + r·sin a
+     * → a = θ - 90。
+     * 起始 θ = -135°（左下 7:30）→ a = -225° ≡ **135°**。
+     * （早先写成 315°，等于把整条弧顺时针转了 180°，起点跑到左上 10:30 去了。）*/
+    dsc.start_angle = 135;
+    dsc.end_angle = 135 + (int32_t)(ANG_SPAN * frac);
 
     lv_draw_arc(layer, &dsc);
 }
