@@ -8,6 +8,7 @@ idf_component_register(
         "runtime.c"
         "odo.c"
         "uplink.c"
+        "status_led.c"
         "app_power.c"
         "version.c"
     INCLUDE_DIRS "."

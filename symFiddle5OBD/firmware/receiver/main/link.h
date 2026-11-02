@@ -37,3 +37,7 @@ esp_err_t link_init(void);
 /* 取一份快照。返回 true = 数据新鲜，可以直接显示；
  * false = 从未收到或已超时，调用方应显示 "--"。 */
 bool link_get(link_state_t *out);
+
+/** 主循环低频调用（每帧一次即可，内部按 500ms 节流）。
+ *  收到过发送端的包之后，定期回一个心跳，让发送端知道圆屏还在线。 */
+void link_service(void);

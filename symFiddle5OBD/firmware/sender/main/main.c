@@ -11,6 +11,7 @@
 #include "telemetry.h"
 #include "can_link.h"
 #include "obd_poll.h"
+#include "status_led.h"
 #include "uplink.h"
 #include "runtime.h"
 #include "odo.h"
@@ -184,6 +185,7 @@ void app_main(void)
     runtime_init();
     odo_init();
     ESP_ERROR_CHECK(uplink_init());
+    status_led_init();
     obd_poll_init();
     app_power_init();
 
@@ -201,6 +203,16 @@ void app_main(void)
         can_link_service();
 
         const bool sim = sim_tick();
+
+        /* 状态灯：模拟模式常亮（进入时三连闪），接收端在线则灭，否则呼吸。
+         * "在线"靠接收端回的心跳判断——广播单向，发送成功不代表对方收到。 */
+        if (sim) {
+            status_led_set(LED_STATE_SIM);
+        } else if (uplink_peer_alive()) {
+            status_led_set(LED_STATE_LINKED);
+        } else {
+            status_led_set(LED_STATE_NO_LINK);
+        }
 
         /* 这一步可能阻塞约 120ms（等 ECU 响应），所以 dt 不能按固定值算。
          * 模拟模式下不发请求，但 TWAI 仍在线（日志里能看总线是否活着）。 */

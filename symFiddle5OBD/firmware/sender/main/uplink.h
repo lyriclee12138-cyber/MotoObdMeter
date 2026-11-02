@@ -14,3 +14,7 @@ esp_err_t uplink_init(void);
 
 /* 填 magic/version/seq 并广播。seq 内部自增 */
 esp_err_t uplink_send(telemetry_t *t);
+
+/* 接收端是否在线（收到过心跳且未超时）。
+ * 广播是单向的，发送成功 ≠ 对端收到，所以要看这个。 */
+bool uplink_peer_alive(void);

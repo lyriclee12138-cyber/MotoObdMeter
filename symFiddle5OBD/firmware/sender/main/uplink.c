@@ -6,6 +6,8 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_now.h"
+#include "esp_timer.h"
+#include "heartbeat.h"
 
 static const char *TAG = "uplink";
 
@@ -13,6 +15,30 @@ static uint32_t s_seq;
 static bool s_ready;
 
 static const uint8_t BCAST[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
+/* ---------- 接收端心跳 ----------
+ * 发送端是广播方，光看 esp_now_send() 的返回值判断不出圆屏在不在，
+ * 只能等接收端主动回心跳。回调跑在 Wi-Fi 任务里，只更新时间戳。 */
+static volatile uint32_t s_hb_ms;
+static volatile bool     s_hb_ever;
+
+static void hb_recv_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len)
+{
+    (void)info;
+    if (data == NULL || len != (int)sizeof(heartbeat_t)) {
+        return;
+    }
+    heartbeat_t hb;
+    memcpy(&hb, data, sizeof(hb));
+    if (hb.magic != HB_MAGIC || hb.kind != HB_KIND_RX) {
+        return;                       /* 同信道可能有别的 ESP-NOW 设备 */
+    }
+    s_hb_ms = (uint32_t)(esp_timer_get_time() / 1000);
+    if (!s_hb_ever) {
+        s_hb_ever = true;
+        ESP_LOGI(TAG, "收到接收端心跳，链路建立");
+    }
+}
 
 esp_err_t uplink_init(void)
 {
@@ -70,6 +96,8 @@ esp_err_t uplink_init(void)
         return err;
     }
 
+    esp_now_register_recv_cb(hb_recv_cb);
+
     s_ready = true;
     ESP_LOGI(TAG, "ESP-NOW ready, ch=%d, bcast", UPLINK_CHANNEL);
     return ESP_OK;
@@ -86,4 +114,15 @@ esp_err_t uplink_send(telemetry_t *t)
     t->seq     = ++s_seq;
 
     return esp_now_send(BCAST, (const uint8_t *)t, sizeof(*t));
+}
+
+/* 接收端是否在线：HB_TIMEOUT_MS 内收到过心跳就算在线。
+ * 注意这和"发送成功"是两回事——发送成功只代表进了队列。 */
+bool uplink_peer_alive(void)
+{
+    if (!s_hb_ever) {
+        return false;
+    }
+    const uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
+    return (uint32_t)(now - s_hb_ms) < HB_TIMEOUT_MS;
 }

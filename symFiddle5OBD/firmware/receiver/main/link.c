@@ -9,6 +9,7 @@
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
+#include "heartbeat.h"
 
 static const char *TAG = "link";
 
@@ -23,6 +24,14 @@ static uint32_t    s_lost;
 static uint32_t    s_bad;
 static int8_t      s_rssi;
 static bool        s_ever;
+
+/* ---------- 心跳（回给发送端，让它知道我们在线） ----------
+ * 发送端没法从 esp_now_send() 的返回值判断我们收没收到，只能我们主动回报。 */
+static uint8_t  s_peer[6];          /* 发送端 MAC，从收到的包里学 */
+static volatile bool s_peer_seen;
+static bool     s_peer_added;       /* 是否已 add_peer */
+static uint32_t s_hb_last_ms;
+static uint16_t s_hb_seq;
 
 static uint32_t now_ms(void)
 {
@@ -63,6 +72,12 @@ static void recv_cb(const esp_now_recv_info_t *info, const uint8_t *data, int le
 
     if (info != NULL && info->rx_ctrl != NULL) {
         s_rssi = (int8_t)info->rx_ctrl->rssi;
+    }
+
+    /* 顺手学会发送端的地址，心跳要发回给它 */
+    if (info != NULL && !s_peer_seen) {
+        memcpy(s_peer, info->src_addr, 6);
+        s_peer_seen = true;
     }
 }
 
@@ -139,4 +154,44 @@ bool link_get(link_state_t *out)
     out->rssi = s_rssi;
 
     return out->ever && ((now_ms() - out->rx_ms) < LINK_STALE_MS);
+}
+
+/* 主循环低频调用：每 500ms 给发送端回一个心跳。
+ *
+ * 发送端靠这个判断"圆屏还在不在"——ESP-NOW 单向广播，光看 esp_now_send()
+ * 的返回值是看不出对端死活的。
+ */
+void link_service(void)
+{
+    if (!s_peer_seen) {
+        return;                       /* 还没收到过包，不知道发给谁 */
+    }
+
+    const uint32_t now = now_ms();
+    if (s_hb_last_ms != 0 && (now - s_hb_last_ms) < HB_PERIOD_MS) {
+        return;
+    }
+    s_hb_last_ms = now;
+
+    /* 第一次见到发送端时才能 add_peer。放在这里而不是回调里：
+     * recv_cb 跑在 Wi-Fi 任务上下文，不适合调 esp_now_add_peer。*/
+    if (!s_peer_added) {
+        esp_now_peer_info_t pi = {0};
+        memcpy(pi.peer_addr, s_peer, 6);
+        pi.channel = LINK_CHANNEL;
+        pi.encrypt = false;
+        pi.ifidx   = WIFI_IF_STA;
+        if (esp_now_add_peer(&pi) != ESP_OK) {
+            return;
+        }
+        s_peer_added = true;
+        ESP_LOGI(TAG, "记住发送端 %02X:%02X:%02X:%02X:%02X:%02X，开始回心跳",
+                 s_peer[0], s_peer[1], s_peer[2], s_peer[3], s_peer[4], s_peer[5]);
+    }
+
+    heartbeat_t hb;
+    hb.magic = HB_MAGIC;
+    hb.kind  = HB_KIND_RX;
+    hb.seq   = s_hb_seq++;
+    esp_now_send(s_peer, (const uint8_t *)&hb, sizeof(hb));
 }
