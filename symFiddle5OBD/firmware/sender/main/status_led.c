@@ -1,60 +1,102 @@
 #include "status_led.h"
 
-#include "driver/ledc.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include <math.h>
+#include <string.h>
+
+#if LED_USE_WS2812
+#include "driver/rmt_encoder.h"
+#include "driver/rmt_tx.h"
+#else
+#include "driver/ledc.h"
+#endif
 
 static const char *TAG = "led";
 
-/* 10 位分辨率 → 占空比 0..1023 */
-#define LED_DUTY_MAX   1023
-#define LED_FREQ_HZ    5000
 #define LED_TICK_MS    20
+#define BREATH_MS      2400      /* 呼吸周期 */
 
-/* 呼吸周期：2.4 秒一亮一暗，比心跳慢，不刺眼 */
-#define BREATH_MS      2400
+/* 三种状态的颜色（RGB） */
+#define C_NO_LINK_R    0
+#define C_NO_LINK_G    40
+#define C_NO_LINK_B    255        /* 蓝：没连上 */
+#define C_SIM_R        255
+#define C_SIM_G        90
+#define C_SIM_B        0           /* 橙：模拟数据 */
 
 static volatile led_state_t s_want;
 static led_state_t s_cur;
 
-/* 闪烁动画：s_flash_left 次，每 200ms 一个亮灭 */
+/* 闪烁动画 */
 static int      s_flash_left;
 static uint32_t s_flash_start;
+
+static bool     s_ok;             /* 驱动初始化成功 */
+
+#if LED_USE_WS2812
+static rmt_channel_handle_t s_chan;
+static rmt_encoder_handle_t s_enc;
+#else
+#define LED_DUTY_MAX   1023
+#endif
 
 static uint32_t now_ms(void)
 {
     return (uint32_t)(esp_timer_get_time() / 1000);
 }
 
-static void led_duty(uint32_t duty)
+/* 设置颜色。scale = 0..255 的亮度系数，用来做呼吸 */
+static void led_rgb(uint8_t r, uint8_t g, uint8_t b, uint8_t scale)
 {
-    if (duty > LED_DUTY_MAX) {
-        duty = LED_DUTY_MAX;
+    if (!s_ok) {
+        return;
     }
-#if LED_ACTIVE_LOW
-    duty = LED_DUTY_MAX - duty;
-#endif
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty);
+    const uint8_t rr = (uint8_t)((uint32_t)r * scale / 255u);
+    const uint8_t gg = (uint8_t)((uint32_t)g * scale / 255u);
+    const uint8_t bb = (uint8_t)((uint32_t)b * scale / 255u);
+
+#if LED_USE_WS2812
+    /* WS2812 的字节顺序是 GRB，不是 RGB，发错了颜色会串（红蓝互换） */
+    uint8_t buf[3] = { gg, rr, bb };
+    rmt_transmit_config_t tc = { .loop_count = 0 };
+    if (rmt_transmit(s_chan, s_enc, buf, sizeof(buf), &tc) == ESP_OK) {
+        /* 24 bit × 1.25us ≈ 30us，等它发完，避免和下次调用排队打架 */
+        rmt_tx_wait_all_done(s_chan, 50);
+    }
+#else
+    /* 单色 LED 只能表达亮度，用三色里最大的那个当亮度 */
+    uint16_t v = rr > gg ? rr : gg;
+    if (bb > v) {
+        v = bb;
+    }
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0,
+                  (uint32_t)v * LED_DUTY_MAX / 255u);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+#endif
 }
 
-/* 呼吸：用余弦做缓入缓出，比线性像"呼吸" */
+static void led_off(void)
+{
+    led_rgb(0, 0, 0, 0);
+}
+
+/* 呼吸：余弦缓入缓出，最低留一点不熄灭 */
 static void breath(void)
 {
     const uint32_t phase = now_ms() % BREATH_MS;
-    const float x = (float)phase / (float)BREATH_MS;          /* 0..1 */
-    const float k = (1.0f - cosf(x * 6.2831853f)) * 0.5f;     /* 0..1..0 */
-    /* 不要完全熄灭，最低留 3%，否则像在闪 */
-    led_duty((uint32_t)(LED_DUTY_MAX * (0.03f + 0.97f * k)));
+    const float x = (float)phase / (float)BREATH_MS;
+    const float k = (1.0f - cosf(x * 6.2831853f)) * 0.5f;
+    const uint8_t scale = (uint8_t)(8 + 247.0f * k);
+    led_rgb(C_NO_LINK_R, C_NO_LINK_G, C_NO_LINK_B, scale);
 }
 
 static void led_tick(void)
 {
-    /* 状态切换：进模拟模式三连闪，其它切换闪一下 */
+    /* 状态切换：进模拟模式三连闪，离开模拟模式闪一下 */
     if (s_want != s_cur) {
         const led_state_t old = s_cur;
         s_cur = s_want;
@@ -67,10 +109,18 @@ static void led_tick(void)
         }
     }
 
-    /* 闪烁优先于常规状态 */
     if (s_flash_left > 0) {
         const uint32_t t = now_ms() - s_flash_start;
-        led_duty((t % 200) < 100 ? LED_DUTY_MAX : 0);
+        const bool on = (t % 200) < 100;
+        if (on) {
+            if (s_cur == LED_STATE_SIM) {
+                led_rgb(C_SIM_R, C_SIM_G, C_SIM_B, 255);
+            } else {
+                led_rgb(C_NO_LINK_R, C_NO_LINK_G, C_NO_LINK_B, 255);
+            }
+        } else {
+            led_off();
+        }
         if (t >= 200) {
             s_flash_start = now_ms();
             s_flash_left--;
@@ -83,10 +133,10 @@ static void led_tick(void)
             breath();
             break;
         case LED_STATE_LINKED:
-            led_duty(0);
+            led_off();
             break;
         case LED_STATE_SIM:
-            led_duty(LED_DUTY_MAX);
+            led_rgb(C_SIM_R, C_SIM_G, C_SIM_B, 255);
             break;
         default:
             break;
@@ -104,18 +154,47 @@ static void led_task(void *arg)
 
 void status_led_init(void)
 {
+#if LED_USE_WS2812
+    rmt_tx_channel_config_t ch = {
+        .gpio_num          = LED_GPIO,
+        .clk_src           = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz     = 10000000,      /* 10MHz → 0.1us/tick */
+        .mem_block_symbols = 48,
+        .trans_queue_depth = 4,
+    };
+    if (rmt_new_tx_channel(&ch, &s_chan) != ESP_OK) {
+        ESP_LOGW(TAG, "RMT 通道创建失败（GPIO%d 被占用？）", LED_GPIO);
+        return;
+    }
+
+    /* WS2812 单总线时序 @10MHz：
+     *   0 码 = 高 0.4us + 低 0.9us
+     *   1 码 = 高 0.8us + 低 0.5us
+     * 高位先发（msb_first） */
+    rmt_bytes_encoder_config_t be = {
+        .bit0 = { .level0 = 1, .duration0 = 4, .level1 = 0, .duration1 = 9 },
+        .bit1 = { .level0 = 1, .duration0 = 8, .level1 = 0, .duration1 = 5 },
+        .flags = { .msb_first = 1 },
+    };
+    if (rmt_new_bytes_encoder(&be, &s_enc) != ESP_OK) {
+        ESP_LOGW(TAG, "RMT 编码器创建失败");
+        return;
+    }
+    if (rmt_enable(s_chan) != ESP_OK) {
+        ESP_LOGW(TAG, "RMT 使能失败");
+        return;
+    }
+#else
     ledc_timer_config_t tc = {
         .speed_mode      = LEDC_LOW_SPEED_MODE,
         .duty_resolution = LEDC_TIMER_10_BIT,
         .timer_num       = LEDC_TIMER_0,
-        .freq_hz         = LED_FREQ_HZ,
+        .freq_hz         = 5000,
         .clk_cfg         = LEDC_AUTO_CLK,
     };
     if (ledc_timer_config(&tc) != ESP_OK) {
-        ESP_LOGW(TAG, "LEDC 定时器配置失败，状态灯不可用");
         return;
     }
-
     ledc_channel_config_t cc = {
         .gpio_num   = LED_GPIO,
         .speed_mode = LEDC_LOW_SPEED_MODE,
@@ -125,20 +204,21 @@ void status_led_init(void)
         .hpoint     = 0,
     };
     if (ledc_channel_config(&cc) != ESP_OK) {
-        ESP_LOGW(TAG, "LEDC 通道配置失败（GPIO%d 被占用？）", LED_GPIO);
         return;
     }
+#endif
 
+    s_ok = true;
     s_want = LED_STATE_NO_LINK;
     s_cur  = LED_STATE_NO_LINK;
 
-    /* 上电自检：闪两下。看得到闪，说明引脚和极性都对了；
-     * 不闪就是 GPIO 不对，改 status_led.h 里的 LED_GPIO。 */
+    /* 上电自检闪两下：看得到闪，说明引脚和灯型都对 */
     s_flash_left  = 2;
     s_flash_start = now_ms();
 
-    xTaskCreate(led_task, "status_led", 2560, NULL, 3, NULL);
-    ESP_LOGI(TAG, "状态灯就绪（GPIO%d，%s）", LED_GPIO, LED_ACTIVE_LOW ? "低电平点亮" : "高电平点亮");
+    xTaskCreate(led_task, "status_led", 3072, NULL, 3, NULL);
+    ESP_LOGI(TAG, "状态灯就绪（GPIO%d，%s）", LED_GPIO,
+             LED_USE_WS2812 ? "WS2812 RGB" : "单色 LED");
 }
 
 void status_led_set(led_state_t st)

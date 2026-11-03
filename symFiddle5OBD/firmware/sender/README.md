@@ -193,11 +193,21 @@ idf.py erase-flash && idf.py flash
 
 上电自检闪 2 下、进入模拟模式三连闪、退出闪 1 下。
 
-**引脚**：默认 `GPIO2`（多数 ESP32-S3 N16R8 开发板的板载 LED），
-低电平点亮的板子改 `LED_ACTIVE_LOW`。都在 `main/status_led.h`。
+**硬件**：GPIO48 上是 **WS2812 可寻址 RGB 灯**（ESP32-S3-DevKitC-1 的配置），
+不是普通单色 LED。LEDC 的 PWM 对它无效，必须用 RMT 按单总线时序驱动：
 
-技术实现：LEDC 硬件 PWM（5 kHz / 10 位），独立任务 20ms 周期驱动，
-不占主循环。呼吸用余弦缓入缓出。
+- RMT 分辨率 10 MHz（0.1 us/tick）
+- 0 码 = 高 4 tick + 低 9 tick；1 码 = 高 8 tick + 低 5 tick；高位先发
+- **字节顺序是 GRB**，写成 RGB 会红蓝互换
+- 24 bit × 1.25 us ≈ 30 us，发完 `rmt_tx_wait_all_done` 等一下再发下次
+
+颜色编码：蓝色呼吸 = 未连接，灭 = 已连接，橙色常亮 = 模拟模式。
+用颜色而不是单纯亮度，是因为三态靠明暗区分容易看错。
+
+`status_led.h` 里 `LED_USE_WS2812=0` 可以退回 LEDC 单色驱动（万一某块板子
+GPIO48 接的是普通 LED）。
+
+独立任务 20 ms 周期驱动，不占主循环。呼吸用余弦缓入缓出。
 
 ## 心跳：为什么必须有
 
