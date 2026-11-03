@@ -49,15 +49,19 @@ static uint32_t now_ms(void)
     return (uint32_t)(esp_timer_get_time() / 1000);
 }
 
-/* 设置颜色。scale = 0..255 的亮度系数，用来做呼吸 */
+/* 设置颜色。scale = 0..255 的亮度系数，用来做呼吸。
+ *
+ * 实际亮度 = 颜色 × scale × LED_BRIGHT_PCT，三者在**一次乘法里**算完再除，
+ * 避免分两步截断把暗部压成 0（呼吸的最低点最容易踩这个）。 */
 static void led_rgb(uint8_t r, uint8_t g, uint8_t b, uint8_t scale)
 {
     if (!s_ok) {
         return;
     }
-    const uint8_t rr = (uint8_t)((uint32_t)r * scale / 255u);
-    const uint8_t gg = (uint8_t)((uint32_t)g * scale / 255u);
-    const uint8_t bb = (uint8_t)((uint32_t)b * scale / 255u);
+    const uint32_t k = (uint32_t)scale * (uint32_t)LED_BRIGHT_PCT;   /* 0..255*100 */
+    const uint8_t rr = (uint8_t)((uint32_t)r * k / 25500u);
+    const uint8_t gg = (uint8_t)((uint32_t)g * k / 25500u);
+    const uint8_t bb = (uint8_t)((uint32_t)b * k / 25500u);
 
 #if LED_USE_WS2812
     /* WS2812 的字节顺序是 GRB，不是 RGB，发错了颜色会串（红蓝互换） */
@@ -91,8 +95,9 @@ static void breath(void)
 {
     const uint32_t phase = now_ms() % BREATH_MS;
     uint32_t k = (phase < (BREATH_MS / 2)) ? (phase * 2) : ((BREATH_MS - phase) * 2);
-    /* k: 0..BREATH_MS → 亮度 8..255 */
-    const uint8_t scale = (uint8_t)(8u + (247u * k) / BREATH_MS);
+    /* k: 0..BREATH_MS → 动画系数 20..255。
+     * 下限不能太低：这个值还要乘 LED_BRIGHT_PCT，8 在 50% 下只剩 4，肉眼几乎看不见。 */
+    const uint8_t scale = (uint8_t)(20u + (235u * k) / BREATH_MS);
     led_rgb(C_NO_LINK_R, C_NO_LINK_G, C_NO_LINK_B, scale);
 }
 
@@ -229,8 +234,8 @@ void status_led_init(void)
     s_flash_start = now_ms();
 
     xTaskCreate(led_task, "status_led", 4096, NULL, 3, NULL);
-    ESP_LOGI(TAG, "状态灯就绪（GPIO%d，%s）", LED_GPIO,
-             LED_USE_WS2812 ? "WS2812 RGB" : "单色 LED");
+    ESP_LOGI(TAG, "状态灯就绪（GPIO%d，%s，亮度上限 %d%%）", LED_GPIO,
+             LED_USE_WS2812 ? "WS2812 RGB" : "单色 LED", LED_BRIGHT_PCT);
 }
 
 void status_led_set(led_state_t st)
