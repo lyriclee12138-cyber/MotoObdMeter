@@ -1,7 +1,8 @@
 # 交接文档 · symFiddle5OBD
 
 > 写给接手的 agent。读完这一份，你应该能直接接着干，不用重新摸索。
-> 最后更新：2026-11-02 傍晚，状态：**圆屏端 v2 极简界面已跑通；发送端固件已出包、等上板联调**。
+> 最后更新：2026-11-03 上午，状态：**收发两端全部跑通**（发送端启动、ESP-NOW 双向、状态灯、CAN 嗅探状态均正常）。
+> 下一步只剩「接上车实测真实 OBD 数据」。
 > **本项目由两个对话并行开发，动代码前先看 0.7 节的边界约定。**
 
 ---
@@ -114,6 +115,69 @@
 - 不确定某文件归谁：**默认不改，先问**
 
 ---
+
+
+## 0.8 2026-11-03：两端联调打通（重要里程碑）
+
+### 最终状态
+
+| 项 | 状态 |
+|---|---|
+| 接收端 v2 极简界面 | ✅ 上机验证 |
+| 转速弧按位置着色 | ✅ 不再残留旧颜色 |
+| 设置页滚动 / 亮度条 / 主题按钮 | ✅ |
+| 发送端启动 | ✅（曾卡在 cpu_start，见下） |
+| ESP-NOW 双向 + 心跳 | ✅ 设置页显示「已连接」 |
+| 状态灯 WS2812 | ✅ 呼吸/灭/三频闪 |
+| CAN 嗅探状态 | ✅ 未接车时显示「无数据」 |
+
+### 发送端启动问题：两个独立的坑
+
+**坑 1：卡在 `cpu_start: Multicore app`，app_main 不执行**
+
+用二分法定位：把 `app_main` 精简成"只打一行日志 + 死循环"，那行日志也不输出
+→ 应用层代码根本没被调用。查 IDF 源码 `cpu_start.c:660`，该日志之后是
+`bootloader_init_mem()` 和 `start_other_core()`，下一句 `Pro cpu up` 是 LOGD 级不打印。
+→ 卡在 **CPU1 启动**。
+
+原因是发送端一直按**调试工程**编译（`CONFIG_COMPILER_OPTIMIZATION_DEBUG=y`），
+而接收端是 `PERF`。Debug 优化还会连带打开 `FREERTOS_TASK_FUNCTION_WRAPPER`
+（包装任务函数做栈溢出检测）。改成 PERF 后解决。
+
+**坑 2：修好 CPU1 后立刻 panic 循环**
+
+`Panic handler entered multiple times. Abort panic handling. Rebooting ...`
+这种情况会吞掉 Guru Meditation 和 backtrace，**但 `Saved PC` 会保留**。
+拿 addr2line 解析：
+
+```
+xtensa-esp32s3-elf-addr2line -pfiaC -e build/xxx.elf 0x4037eb98
+→ s_print_psram_info at esp_psram_impl_octal.c:269
+  (inlined by) esp_psram_impl_enable at :370
+```
+
+**崩在 PSRAM 初始化**。发送端不需要 8MB PSRAM（CAN 轮询几百 KB 够），
+直接 `CONFIG_SPIRAM=n` 关掉，问题消失。
+
+> 教训：这两个坑是串联的，PERF 修好第一个才暴露出第二个。
+> 另外 `noLED` 二分包证明了崩溃与 LED 无关——先做二分再改代码，省了大量试错。
+
+### 状态灯
+
+GPIO48 上是 **WS2812 RGB**（不是普通 LED），LEDC 的 PWM 无效，必须 RMT 单总线：
+10MHz 分辨率、0 码 4/9 tick、1 码 8/5 tick、msb_first、**GRB 字节序**。
+
+- 蓝色呼吸 = 接收端不在线
+- 灭 = 在线
+- 橙色常亮 = 模拟模式
+
+`LED_ENABLE=0` 可整体禁用，`LED_USE_WS2812=0` 可退回 LEDC 单色。
+
+### 心跳（为什么必须有）
+
+ESP-NOW 单向广播，`esp_now_send()` 返回 OK 只代表进了队列，发送端不知道对方收没收到。
+所以接收端每 500ms 回 4 字节心跳（`shared/heartbeat.h`），发送端 1500ms 超时判掉线。
+`esp_now_add_peer` 必须在主循环上下文调用，不能放在 recv 回调里。
 
 ## 1. 硬件
 
