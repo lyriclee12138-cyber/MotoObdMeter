@@ -25,9 +25,16 @@ static const char *UI_TAG = "ui";
 /* lv_draw_arc 的 radius 是**外**半径。
  * 194/11 → 带 183..194，与背景图里烘焙的轨道和彩环完全重合。
  * （早先是 200，比烘焙的轨道外扩 6px，彩色弧看着浮在轨道外面。） */
-#define ARC_R_OUT    194
+#define ARC_R_OUT    194        /* 彩环外半径（烘焙在背景图里） */
 #define ARC_W        11
 #define ARC_R_MID    (ARC_R_OUT - ARC_W / 2.0f)     /* 188.5 */
+
+/* 擦除弧比彩环宽 1px：195/13 → 带 182..195。
+ * 必须比彩环大一圈，否则彩环边缘那几个半透明过渡像素擦不干净 ——
+ * LVGL 的圆心是整数、背景图中心在 232.5，0.5px 的错位就足以在未填充段
+ * 边缘留下一条彩色细线（黑夜主题下非常显眼）。多出来的 1px 落在轨道上。 */
+#define ERASE_R_OUT  195
+#define ERASE_W      13
 
 /* 文字位置（屏幕绝对 y）。这些数字是素材渲染时就定好的，别随手改。 */
 #define Y_RPM        208
@@ -155,8 +162,8 @@ static void arc_draw_cb(lv_event_t *e)
         lv_draw_arc_dsc_init(&ad);
         ad.center.x = cx;
         ad.center.y = cy;
-        ad.radius = ARC_R_OUT;
-        ad.width = ARC_W;
+        ad.radius = ERASE_R_OUT;
+        ad.width = ERASE_W;
         ad.color = ui_palette()->track;
         ad.opa = LV_OPA_COVER;
         ad.rounded = 0;                                  /* 方口，圆头交给第 2 步 */
@@ -214,7 +221,7 @@ static void invalidate_sweep(float f0, float f1)
         if (y > maxy) { maxy = y; }
     }
 
-    float pad = ARC_W * 0.5f + 2.0f;
+    float pad = ERASE_W * 0.5f + 2.0f;   /* 按擦除弧算：它是整条带里最宽的 */
     lv_area_t a;
     a.x1 = (int32_t)floorf(minx - pad);
     a.y1 = (int32_t)floorf(miny - pad);
