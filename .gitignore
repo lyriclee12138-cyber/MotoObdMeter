@@ -18,3 +18,4 @@ snapshots/
 # Windows 缩略图缓存
 Thumbs.db
 desktop.ini
+*.wbapp_*.genie

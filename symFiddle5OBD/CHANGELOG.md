@@ -1,6 +1,6 @@
 # 变更记录
 
-只记"用户能看见的变化"和"踩过的结构性坑"。逐条实现细节看 `firmware/*/README.md` 和 `HANDOFF.md`。
+只记"用户能看见的变化"和"踩过的结构性坑"。开发流程看 `docs/dev-guide.md`，实现细节看 `firmware/*/README.md`。
 
 ---
 
@@ -24,7 +24,7 @@
 | 发送端 CAN（TWAI 500k）+ OBD 轮询框架 | ✅ 台架（未接车） |
 | 发送端深度睡眠（总线静默 60s 入睡，5 分钟定时唤醒） | ✅ 已实现 |
 
-### 这一版修掉的结构性问题（都记在 HANDOFF / README 里）
+### 这一版修掉的结构性问题（详见 docs/dev-guide.md 第 8 节）
 
 1. **发送端启动卡死**：DEBUG 优化导致卡在 CPU1 启动 → 改 PERF 优化
 2. **改完 PERF 立刻 panic**：崩在 PSRAM 初始化 → 关闭 PSRAM（发送端不需要 8MB）
