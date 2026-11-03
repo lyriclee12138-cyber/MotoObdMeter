@@ -250,14 +250,13 @@
 <h2 id="sig">信号电路</h2>
 
 <div class="swrap">
-<svg viewBox="0 0 400 555" width="100%" role="img" aria-label="CAN 信号电路原理图">
+<svg viewBox="0 0 400 575" width="100%" role="img" aria-label="CAN 信号电路原理图">
 <g stroke="var(--sub)" stroke-width="1.8" fill="none" stroke-linecap="round">
 <path d="M160 150 H200"/>
 <path d="M160 175 H200"/>
 <path d="M160 200 H200"/>
 <path d="M160 225 H200"/>
 <path d="M180 225 V265"/>
-<path d="M215 280 V310"/>
 <path d="M290 430 V465"/>
 <path d="M250 280 V330"/>
 <path d="M320 280 V330"/>
@@ -271,7 +270,6 @@
 
 <g stroke="var(--sub)" stroke-width="1.6" fill="none" stroke-linecap="round">
 <path d="M169 265 H191"/><path d="M173 271 H187"/><path d="M177 277 H183"/>
-<path d="M204 310 H226"/><path d="M208 316 H222"/><path d="M212 322 H218"/>
 <path d="M279 465 H301"/><path d="M283 471 H297"/><path d="M287 477 H293"/>
 </g>
 
@@ -302,7 +300,8 @@
 <text x="290" y="492" text-anchor="middle" font-size="10" fill="var(--sub)">5 · 信号地</text>
 
 <text x="20" y="522" font-size="11" fill="var(--sub)">TXD→GPIO4、RXD→GPIO5 不交叉；VCC 必须接 3V3</text>
-<text x="20" y="540" font-size="11" fill="var(--sub)">三个地符号是同一个网络：都接到开发板 GND，再汇到模块 VIN−（OBD 4 脚）</text>
+<text x="20" y="540" font-size="11" fill="var(--sub)">两个地符号是同一个网络，都接到开发板 GND 就行，不用另外接线</text>
+<text x="20" y="558" font-size="11" fill="var(--sub)">这块模块的 Rs 已板载 10K 接地，排针上没有、也不用你接</text>
 </svg>
 </div>
 
@@ -330,7 +329,7 @@
     <tr><td><code>GND</code></td><td><code>GND</code></td></tr>
     <tr><td><code>GPIO4</code></td><td><code>TX / CTX / D</code></td></tr>
     <tr><td><code>GPIO5</code></td><td><code>RX / CRX / R</code></td></tr>
-    <tr><td><code>GND</code></td><td><code>RS / STB / S</code> <span class="dim">（不接就待机）</span></td></tr>
+    <tr><td><code>GND</code></td><td><code>RS / STB / S</code> <span class="dim">（你这款模块板载 10K 已接，排针没引出，不用管）</span></td></tr>
   </table>
   <table style="margin-top:12px">
     <tr><th>收发器</th><th>OBD 16 针</th></tr>
@@ -454,7 +453,7 @@
     <li><span class="tag warn">注意</span> 停放一两周：掉到 40~50%，冬天可能打不着</li>
     <li><span class="tag warn">不行</span> 长期停放：必须 ACC 断电，或拔掉插头</li>
   </ul>
-  <p class="note">想把这 0.43 Ah/天再砍一半，最划算的是<strong>把收发器打进待机</strong>（Rs 拉高，10mA → 几百 µA）＋去掉开发板电源灯。一根杜邦线 + 五行代码。</p>
+  <p class="note">想把这 0.43 Ah/天再砍一半，最划算的是<strong>把收发器打进待机</strong>（Rs 拉高，10mA → 几百 µA）＋去掉开发板电源灯。但你这块模块的 Rs 没引出（板载 10K 已接地），这条暂时做不了，除非换带 STB 引脚的模块。</p>
 </div>
 
 <h2 id="p-plan">三个阶段</h2>

@@ -18,7 +18,7 @@
 | GND | 开发板 GND |
 | TX / CTX / D | ESP32-S3 **GPIO4**（TWAI_TX） |
 | RX / CRX / R | ESP32-S3 **GPIO5**（TWAI_RX） |
-| RS / STB（若有） | **GND**（高速模式，悬空会进待机） |
+| RS / STB（若有） | **GND**（高速模式，悬空会进待机）。<br>常见 SN65HVD230 模块板载 10K 已接、排针不引出，无需处理 |
 | Vref（若有） | 悬空 |
 | CANH | OBD **6 脚** |
 | CANL | OBD **14 脚** |
