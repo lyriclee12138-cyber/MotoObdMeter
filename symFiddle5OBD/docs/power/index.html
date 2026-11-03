@@ -79,6 +79,7 @@
   <a href="#taken">OBD vs ACC</a>
   <a href="#topo">接线图</a>
   <a href="#parts">元件干什么用的</a>
+  <a href="#nosolder">不用焊</a>
   <a href="#buy">买什么</a>
   <a href="#measure">装车前量什么</a>
   <a href="#screen">圆屏</a>
@@ -309,15 +310,74 @@ OBD 5  (信号地) ───> SN65HVD230 GND
   <p><b>怎么接：</b>和电解<b>并联</b>，越靠近芯片引脚越好（几毫米）。</p>
 </div>
 
+<h2 id="nosolder">不想焊？全成品也能搭</h2>
+<p class="lead">不用画板，也不用焊贴片。把贴片器件换成「带引脚的直插件」，再用接线帽（Wago 221）拧起来就行。</p>
+
+<div class="card">
+  <h3>器件替换表</h3>
+  <table>
+    <tr><th>原方案（贴片，要焊）</th><th>换成（直插，能拧）</th></tr>
+    <tr><td>SMBJ18A（DO-214 贴片）</td><td><b>P6KE18A</b>（DO-15 轴向 600W）<br><span class="dim">白环那端接 +12V</span></td></tr>
+    <tr><td>SS34（SMA 贴片）</td><td><b>1N5822</b>（DO-41 轴向 3A）<br><span class="dim">白环朝负载</span></td></tr>
+    <tr><td>1000µF 贴片</td><td><b>引线式电解 1000µF/25V</b></td></tr>
+    <tr><td>保险丝座</td><td><b>带线汽车保险丝座</b>（片式）</td></tr>
+    <tr><td>PCB / 洞洞板</td><td><b>不需要</b>，用 Wago 221 或端子排</td></tr>
+  </table>
+  <p class="note">直插件的耐压和功率一点不比贴片差。P6KE18A 是 600W 系列，对付车载尖峰够用；我们只走 0.2A，1N5822 的 3A 额定绰绰有余。</p>
+</div>
+
+<div class="card">
+  <h3>只有 4 个节点要并</h3>
+  <pre>① 12V 进（OBD 16 脚）→ 保险 → TVS 正端 + 防反接阳极
+② 防反接阴极 + TVS 负端 → 模块 VIN+
+③ 模块 VIN− + OBD 4 脚 → 地
+④ 模块 5V/GND → 开发板</pre>
+  <p>每个节点一颗 Wago 221 就能压三根线，免工具、可反复拆。</p>
+</div>
+
+<div class="card">
+  <h3>更省事的两种做法</h3>
+  <p><b>A. 买“带保护”的模块</b><br>
+  有标注「防反接 / 防浪涌 / 带保险」的车载降压模块，买这种就只剩串一个保险。
+  买前看清详情页有没有真的写 TVS 和反接保护——很多只写“过流保护”，那是芯片自带的。</p>
+  <p><b>B. 成品 USB 输出模块 + USB 线接开发板</b><br>
+  如果模块自带 USB-A 输出（比如欣薇这块），<b>一根 USB-A 转 USB-C 线插开发板 COM 口</b>，
+  连开发板都不用接线，只剩「12V 进模块」两颗螺丝要拧。</p>
+</div>
+
+<div class="card">
+  <h3>你发的这块（欣薇 9–36V → 5.2V 5A）</h3>
+  <table>
+    <tr><th>参数</th><th>结论</th></tr>
+    <tr><td>输入 9–36V</td><td><span class="tag ok">够</span> 车上 12V，充电 14.5V，起动瞬时 9~10V</td></tr>
+    <tr><td>输出 5.2V / 5A</td><td><span class="tag ok">余量极大</span> 我们只要 0.2A，几乎不发热</td></tr>
+    <tr><td>同步整流</td><td><span class="tag ok">好</span> 轻载也稳</td></tr>
+    <tr><td>端子 / USB-A / 背面焊盘</td><td><span class="tag ok">免焊接线</span></td></tr>
+    <tr><td>保险 / TVS / 防反接</td><td><span class="tag warn">没有</span> 要自己串</td></tr>
+    <tr><td>静态电流</td><td><span class="tag warn">未标注</span> 必须实测</td></tr>
+  </table>
+
+  <h3 style="font-size:15px;margin-top:16px">三点提醒</h3>
+  <ul>
+    <li><b>5.2V 没问题。</b>开发板 LDO 吃得下，USB 规范也允许到 5.25V。</li>
+    <li><b>静态电流要量。</b>这类模块带 USB 识别芯片，空载可能吃 5~20mA。
+        我们深睡本来只有 15~20mA，模块再吃 15mA 就翻倍了。
+        量法：12V 输入串万用表 mA 档，不接负载。偏大就把取电点改成 ACC。</li>
+    <li><b>快充芯片不会乱升压。</b>它只对支持 QC 的设备协商 9V/12V，ESP32 不会发起协商，输出一直是 5V。</li>
+  </ul>
+</div>
+
 <h2 id="buy">买什么</h2>
+<p class="lead">下面已是<b>直插（免焊）</b>版本，配接线帽压接即可，不用烙铁。</p>
 
 <div class="card">
   <h3>必需 <span class="tag">约 ¥60~90</span></h3>
   <label class="ck"><input type="checkbox"><span>12V→5V 降压模块<span class="dim">（宽压 9~36V，固定 5V，≥2A）</span></span><span class="p">¥15~30</span></label>
   <label class="ck"><input type="checkbox"><span>保险丝座 + 1A 保险丝<span class="dim">（备 0.5A / 2A 各一）</span></span><span class="p">¥5~10</span></label>
-  <label class="ck"><input type="checkbox"><span>TVS 二极管 SMBJ18A ×3</span><span class="p">¥1~2/个</span></label>
-  <label class="ck"><input type="checkbox"><span>肖特基 SS34 ×3</span><span class="p">¥0.5~1/个</span></label>
-  <label class="ck"><input type="checkbox"><span>电解 1000µF/16V + 瓷片 0.1µF 各 2</span><span class="p">¥3</span></label>
+  <label class="ck"><input type="checkbox"><span>TVS <b>P6KE18A</b>（直插）×3</span><span class="p">¥1~2/个</span></label>
+  <label class="ck"><input type="checkbox"><span>肖特基 <b>1N5822</b>（直插）×3</span><span class="p">¥0.5~1/个</span></label>
+  <label class="ck"><input type="checkbox"><span>引线电解 1000µF/25V ×2 + 瓷片 0.1µF ×2</span><span class="p">¥3</span></label>
+  <label class="ck"><input type="checkbox"><span>Wago 221 快速接线帽（3 孔）<span class="dim">（免焊关键件）</span></span><span class="p">¥10</span></label>
   <label class="ck"><input type="checkbox"><span>热缩管 + 自粘防水胶带 + 扎带</span><span class="p">¥25</span></label>
 </div>
 
