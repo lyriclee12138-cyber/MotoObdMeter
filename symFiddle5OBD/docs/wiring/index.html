@@ -2,9 +2,73 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>全车接线图 · fiddle5 圆屏仪表</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>fiddle5 圆屏仪表 · 装车手册</title>
 <style>
+
+  :root{
+    --bg:#f6f7f9; --card:#fff; --text:#16181d; --sub:#5d6470;
+    --line:#e3e6ea; --accent:#2f6fed; --accent-bg:#eaf1ff;
+    --warn:#c2410c; --warn-bg:#fff4ec; --ok:#0f7b4f; --ok-bg:#eafaf1;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d0f12; --card:#171a1f; --text:#e8eaee; --sub:#98a0ac;
+      --line:#282d35; --accent:#6fa0ff; --accent-bg:#182234;
+      --warn:#ff9b62; --warn-bg:#2a1c13; --ok:#5ddba0; --ok-bg:#12251c;
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;padding:0 14px 60px;background:var(--bg);color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    max-width:720px;margin-inline:auto;
+  }
+  h1{font-size:22px;line-height:1.35;margin:26px 0 6px;letter-spacing:-.2px}
+  h2{font-size:18px;margin:34px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:20px 0 8px}
+  p{margin:10px 0}
+  .lead{color:var(--sub);font-size:14.5px;margin-top:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin:12px 0}
+  .card h3{margin-top:0}
+  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-bg);color:var(--accent);font-weight:600;vertical-align:middle}
+  .tag.warn{background:var(--warn-bg);color:var(--warn)}
+  .tag.ok{background:var(--ok-bg);color:var(--ok)}
+  nav{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 8px}
+  nav a{font-size:13px;text-decoration:none;color:var(--text);background:var(--card);
+        border:1px solid var(--line);border-radius:99px;padding:6px 12px}
+  nav a:active{background:var(--accent-bg)}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px}
+  .kv dt{color:var(--sub)}
+  .kv dd{margin:0;font-weight:600}
+  .big{font-size:26px;font-weight:700;letter-spacing:-.5px}
+  .big small{font-size:13px;font-weight:500;color:var(--sub);margin-left:4px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>div{flex:1 1 140px;background:var(--accent-bg);border-radius:12px;padding:10px 12px}
+  .row .lbl{font-size:12.5px;color:var(--sub);display:block;margin-bottom:2px}
+  ul{padding-left:20px;margin:8px 0}
+  li{margin:5px 0}
+  .pro li::marker{color:var(--ok)}
+  .con li::marker{color:var(--warn)}
+  code{font-family:var(--mono);font-size:13.5px;background:var(--accent-bg);padding:1px 5px;border-radius:5px}
+  pre{font-family:var(--mono);font-size:12.5px;line-height:1.7;background:var(--card);
+      border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto;margin:10px 0}
+  .note{font-size:13.5px;color:var(--sub);border-left:3px solid var(--accent);padding-left:11px;margin:12px 0}
+  .danger{background:var(--warn-bg);border:1px solid transparent;border-radius:12px;padding:12px 14px;margin:12px 0;font-size:14.5px}
+  svg{display:block;width:100%;height:auto;margin:6px 0}
+  .swrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 4px;margin:12px 0}
+  label.ck{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line);font-size:15px}
+  label.ck:last-child{border-bottom:0}
+  label.ck input{width:20px;height:20px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--accent)}
+  label.ck span.p{color:var(--sub);font-size:13px;margin-left:auto;white-space:nowrap}
+  .dim{color:var(--sub)}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--sub);font-weight:600;font-size:13px}
+  .foot{margin-top:34px;font-size:13px;color:var(--sub);text-align:center}
+
+
   :root{
     --bg:#f6f7f9; --card:#fff; --text:#16181d; --sub:#5d6470;
     --line:#e3e6ea; --accent:#2f6fed; --accent-bg:#eaf1ff;
@@ -57,9 +121,22 @@
   .flow .step.p{border-left:3px solid #2f6fed}
   .flow .step.s{border-left:3px solid #7c4dff}
   .foot{margin-top:34px;font-size:13px;color:var(--sub);text-align:center}
+
+  .tabbar{position:sticky;top:0;z-index:20;display:flex;gap:8px;padding:10px 0 8px;background:var(--bg);border-bottom:1px solid var(--line);margin-bottom:6px}
+  .tb{flex:1;font-family:inherit;font-size:14.5px;font-weight:600;padding:10px 0;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--sub);cursor:pointer}
+  .tb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  [hidden]{display:none !important}
 </style>
 </head>
 <body>
+
+<div class="tabbar">
+  <button class="tb on" onclick="sw('wiring',this)">接线图</button>
+  <button class="tb" onclick="sw('power',this)">供电方案</button>
+</div>
+
+<div id="t-wiring">
+
 
 <h1>全车接线图</h1>
 <p class="lead">电源走 <b>ACC</b>，OBD 只做信号<br>fiddle5 圆屏仪表 · 发送端 · 2026-11-03</p>
@@ -321,5 +398,389 @@
 
 <p class="foot">对应固件 v0.1-alpha · 方案细节见 docs/power-plan.md</p>
 
+
+</div>
+
+<div id="t-power" hidden>
+
+
+<h1>装车供电方案</h1>
+<p class="lead">fiddle5 圆屏仪表 · 发送端（座桶内 ESP32-S3）怎么从车上取电<br>2026-11-03 · 对应固件 v0.1-alpha</p>
+
+<nav>
+  <a href="#p-power">功耗</a>
+  <a href="#p-plan">三个阶段</a>
+  <a href="#p-taken">OBD vs ACC</a>
+  <a href="#p-topo">接线图</a>
+  <a href="#p-parts">元件干什么用的</a>
+  <a href="#p-nosolder">不用焊</a>
+  <a href="#p-buy">买什么</a>
+  <a href="#p-measure">装车前量什么</a>
+  <a href="#p-screen">圆屏</a>
+</nav>
+
+<h2 id="p-power">先算功耗，这决定一切</h2>
+
+<div class="row">
+  <div><span class="lbl">工作时（5V 侧）</span><span class="big">0.15–0.2<small>A</small></span></div>
+  <div><span class="lbl">峰值</span><span class="big">0.5<small>A</small></span></div>
+  <div><span class="lbl">深度睡眠</span><span class="big">15–20<small>mA</small></span></div>
+</div>
+
+<p>所以 <strong>5V/1A 就够</strong>，选 2~3A 是为了余量和发热。</p>
+
+<div class="card">
+  <h3>深睡时的耗电，以及电瓶能撑多久</h3>
+  <div class="kv">
+    <dt>开发板本身（LDO+电源灯+CH340）</dt><dd>6~10 mA</dd>
+    <dt>SN65HVD230 收发器（仍在高速模式）</dt><dd>~10 mA ← 最大头</dd>
+    <dt>定时唤醒摊薄（5 分钟醒 3 秒）</dt><dd>~1 mA</dd>
+  </div>
+  <pre>0.018 A × 24 h ≈ 0.43 Ah / 天
+踏板车电瓶 6~8 Ah → 每天约 6%</pre>
+  <ul>
+    <li><span class="tag ok">没问题</span> 每周都骑：一发动就补回来</li>
+    <li><span class="tag warn">注意</span> 停放一两周：掉到 40~50%，冬天可能打不着</li>
+    <li><span class="tag warn">不行</span> 长期停放：必须 ACC 断电，或拔掉插头</li>
+  </ul>
+  <p class="note">想把这 0.43 Ah/天再砍一半，最划算的是<strong>把收发器打进待机</strong>（Rs 拉高，10mA → 几百 µA）＋去掉开发板电源灯。一根杜邦线 + 五行代码。</p>
+</div>
+
+<h2 id="p-plan">三个阶段</h2>
+
+<div class="card">
+  <h3>① 现在 · 充电宝 <span class="tag ok">已用</span></h3>
+  <p>充电宝 → USB-C 插开发板 <strong>COM 口</strong>（不是另一个 USB 口）。一根线同时给电和串口。</p>
+  <ul>
+    <li>用<b>直角</b> USB-C 线，减少插头受力</li>
+    <li>充电宝别选"轻载自动关机"的：我们只有 0.2A，有的便宜货会误判空载断电</li>
+    <li>症状：骑一会儿灯灭 / 屏上显示"发送端未连接"</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>② 装车 · OBD 取常电 <span class="tag">推荐先这样</span></h3>
+  <p>OBD 16 脚（常电）→ 保险 → 降压模块 → 开发板。不破线，30 分钟能装完。</p>
+</div>
+
+<div class="card">
+  <h3>③ 加强 · ACC 只做使能</h3>
+  <p>如果经常把车停放一两周：在②上串一个继电器，用 ACC 控制通断。熄火后整机彻底断电，静态电流 0。</p>
+</div>
+
+<h2 id="p-taken">OBD 取电 vs ACC 取电</h2>
+
+<div class="card">
+  <h3>A. 从 OBD 16 脚取常电</h3>
+  <p><b>怎么做：</b>现有那根白色 16 针公头，把 <b>16 脚（常电）</b> 和 <b>4 脚（地）</b> 挑出来，
+  16 脚 → 保险 1A → 模块 IN+，4 脚 → 模块 IN−，输出 5V 给板子。CAN 也从这个插头出。</p>
+  <p><b>优点</b></p>
+  <ul class="pro">
+    <li>不改原车线束，保修期内最容易解释</li>
+    <li>OBD 座自带 7.5~10A 保险，天然多一层保护</li>
+    <li>电源和 CAN 同一个插头，共地天然，只走一根线</li>
+    <li>要回滚就拔插头</li>
+  </ul>
+  <p><b>缺点</b></p>
+  <ul class="con">
+    <li>16 脚是<b>常电</b>，靠固件深睡兜底，长期停放会耗电瓶</li>
+    <li>插头长期插着会松动/氧化，震动大 → 必须扎带固定</li>
+    <li>插着它就插不了诊断仪（要用诊断时拔掉，或买一分二）</li>
+    <li>有的车型 16 脚受 ECU 控制，熄火其实没电 → <b>装车前量一下</b></li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>B. 从 ACC 取电</h3>
+  <h3 style="font-size:14.5px;margin-top:12px">三种做法（推荐度从高到低）</h3>
+  <p><b>B1 保险盒取电器</b>（不破线）<br>
+  按车上保险片尺寸买 fuse tap，插在 ACC／点烟器／喇叭 的保险位，会多出一根正极线；负极就近搭铁。</p>
+  <p><b>B2 并接尾灯/牌照灯正极</b>（破线）<br>
+  刺破夹或剥皮焊接 + 热缩。震动下虚接高发，不推荐。</p>
+  <p><b>B3 ACC 只做信号，大电流仍走 OBD 常电</b>（最稳）</p>
+  <pre>OBD 16 ──保险──┬─────────────────> 降压 IN+
+               └─ 继电器触点 30→87 ─┘
+
+ACC ──1kΩ──> 继电器线圈 85
+车身地 ─────> 继电器线圈 86</pre>
+  <p class="dim">ACC 只驱动线圈（几十 mA），不给细线加负载；熄火继电器断开，整机断电。</p>
+
+  <p><b>优点</b></p>
+  <ul class="pro">
+    <li>熄火即断电，<b>完全不耗电瓶</b>（最大价值）</li>
+    <li>不用操心"停放两周打不着火"</li>
+  </ul>
+  <p><b>缺点</b></p>
+  <ul class="con">
+    <li>要找 ACC，不同车型位置不一样</li>
+    <li><b>起动瞬间电压跌到 9~10V</b>，降压模块可能重启</li>
+    <li>破线/加件影响保修（B1 影响最小）</li>
+    <li>ACC 线细，不能直接带负载（所以才要 B3 的继电器）</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>怎么选</h3>
+  <table>
+    <tr><th></th><th>OBD 常电</th><th>ACC 取电</th></tr>
+    <tr><td>改动量</td><td>极小</td><td>中</td></tr>
+    <tr><td>破线</td><td>不用</td><td>B1 不用 / B2 要破</td></tr>
+    <tr><td>熄火耗电</td><td>15~20 mA</td><td>0</td></tr>
+    <tr><td>长期停放</td><td>每天掉 6%</td><td>无影响</td></tr>
+    <tr><td>起动压降</td><td>不影响（本来在睡）</td><td>可能重启</td></tr>
+    <tr><td>适合</td><td><b>每周都骑</b></td><td><b>经常停放</b></td></tr>
+  </table>
+  <p class="note"><b>建议：</b>先做 A（半小时、不破线），骑一两周看电瓶状态。真不行再加 B3 的继电器，而不是拆掉重来。</p>
+</div>
+
+<h2 id="p-topo">接线拓扑图</h2>
+
+<div class="swrap">
+<svg viewBox="0 0 360 520" role="img" aria-label="供电链路拓扑图">
+  <defs>
+    <marker id="p-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g font-family="-apple-system,PingFang SC,sans-serif" color="#8a919d">
+
+  <!-- 主链路 -->
+  <g fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)">
+    <path d="M150 58 L150 72"/>
+    <path d="M150 120 L150 134"/>
+    <path d="M150 182 L150 196"/>
+    <path d="M150 244 L150 258"/>
+    <path d="M150 306 L150 320"/>
+    <path d="M150 368 L150 382"/>
+  </g>
+
+  <!-- 盒子 1 -->
+  <rect x="44" y="14" width="212" height="44" rx="10" fill="#eaf1ff" stroke="#2f6fed" stroke-width="1.2"/>
+  <text x="150" y="35" text-anchor="middle" font-size="14" font-weight="700" fill="#1c4fc4">OBD 16 脚</text>
+  <text x="150" y="51" text-anchor="middle" font-size="11.5" fill="#4a6fbf">+12V 常电（熄火也有）</text>
+
+  <rect x="44" y="76" width="212" height="44" rx="10" fill="#fff" stroke="#c9ced7"/>
+  <text x="150" y="97" text-anchor="middle" font-size="14" font-weight="600">保险丝 1A</text>
+  <text x="150" y="113" text-anchor="middle" font-size="11.5" fill="#8a919d">短路时不烧车</text>
+
+  <rect x="44" y="138" width="212" height="44" rx="10" fill="#fff4ec" stroke="#e8712f"/>
+  <text x="150" y="159" text-anchor="middle" font-size="14" font-weight="600">TVS · SMBJ18A</text>
+  <text x="150" y="175" text-anchor="middle" font-size="11.5" fill="#b35c26">削掉打火尖峰</text>
+
+  <rect x="44" y="200" width="212" height="44" rx="10" fill="#fff4ec" stroke="#e8712f"/>
+  <text x="150" y="221" text-anchor="middle" font-size="14" font-weight="600">SS34 防反接</text>
+  <text x="150" y="237" text-anchor="middle" font-size="11.5" fill="#b35c26">接反了不炸</text>
+
+  <rect x="44" y="262" width="212" height="44" rx="10" fill="#eaf1ff" stroke="#2f6fed" stroke-width="1.2"/>
+  <text x="150" y="283" text-anchor="middle" font-size="14" font-weight="700" fill="#1c4fc4">12V → 5V 模块</text>
+  <text x="150" y="299" text-anchor="middle" font-size="11.5" fill="#4a6fbf">宽压 9~36V 输入 / 3A</text>
+
+  <rect x="44" y="324" width="212" height="44" rx="10" fill="#fff4ec" stroke="#e8712f"/>
+  <text x="150" y="345" text-anchor="middle" font-size="14" font-weight="600">1000µF + 0.1µF</text>
+  <text x="150" y="361" text-anchor="middle" font-size="11.5" fill="#b35c26">储能 + 滤高频</text>
+
+  <rect x="44" y="386" width="212" height="44" rx="10" fill="#eafaf1" stroke="#0f7b4f" stroke-width="1.2"/>
+  <text x="150" y="407" text-anchor="middle" font-size="14" font-weight="700" fill="#0b5f3d">开发板 5V / GND</text>
+  <text x="150" y="423" text-anchor="middle" font-size="11.5" fill="#16764f">ESP32-S3（座桶内）</text>
+
+  <!-- 地轨 -->
+  <path d="M256 160 L300 160 L300 408" fill="none" stroke="currentColor" stroke-width="1.6"/>
+  <path d="M256 284 L300 284" fill="none" stroke="currentColor" stroke-width="1.6"/>
+  <path d="M256 408 L300 408" fill="none" stroke="currentColor" stroke-width="1.6"/>
+  <text x="340" y="452" text-anchor="end" font-size="11.5" fill="#8a919d">OBD 4 脚</text>
+  <text x="340" y="467" text-anchor="end" font-size="11.5" fill="#8a919d">车身地</text>
+
+  <!-- 说明 -->
+  <text x="14" y="470" font-size="11.5" fill="#8a919d">箭头方向 = 电流方向，从上往下</text>
+  <text x="14" y="490" font-size="11.5" fill="#8a919d">橙色 = 保护元件（后面章节解释）</text>
+  </g>
+</svg>
+</div>
+
+<h3>CAN 与地</h3>
+<pre>OBD 6  (CAN-H) ─┐  双绞，&lt;30cm
+OBD 14 (CAN-L) ─┴──> SN65HVD230 CANH / CANL
+
+OBD 5  (信号地) ───> SN65HVD230 GND
+                    ↑ 与电源地只在 OBD 插头处汇合（单点接地）</pre>
+<p class="note">为什么电源地和信号地要分开：0.2A 的电流在地线上会产生压降，抬高了 CAN 的共模电压，接收裕量变小。<b>只在插头处汇合</b>就没有这个问题。</p>
+
+<h2 id="p-parts">那些元件到底是干什么的</h2>
+<p class="lead">车上 12V 一点都不干净：发电机调压、起动机通断、点火线圈、继电器断开，都会甩出几百伏、几微秒的尖峰。下面四件套就是为这个准备的，顺序不能换。</p>
+
+<div class="card">
+  <h3>保险丝 · 1A <span class="tag">防火灾</span></h3>
+  <p><b>干什么：</b>线束一旦短路（磨破皮、进水），电流会瞬间到几十安，把线烧红甚至起火。保险丝在几十毫秒内熔断，牺牲自己保车。</p>
+  <p><b>不装会怎样：</b>短路时没东西拦着，最坏是烧线束。这是唯一一个"涉及安全"的元件，不能省。</p>
+  <p><b>怎么选：</b>负载 0.2A，选 1A。如果后面接了大电容，用<b>慢熔（T）</b>的，否则开机充电瞬间可能误熔断。</p>
+</div>
+
+<div class="card">
+  <h3>TVS · SMBJ18A <span class="tag">防打火尖峰</span></h3>
+  <p><b>干什么：</b>平时它像不存在（高阻，不导通）。只要电压超过约 18V，它瞬间变成导体，把尖峰的能量泄放到地，把电压钳在 ~29V 以内。</p>
+  <p><b>不装会怎样：</b>降压模块输入端的 MOS 耐压通常 30~40V，一次打火脉冲就能打穿 → 模块"突然没输出了"，严重时内部短路、烧保险。这种故障没有征兆，很难查。</p>
+  <p><b>怎么选：</b>SMBJ18A。18V 关断电压高于充电时的 14.5V（不会误动作），钳位 29V 低于模块耐压。单向/双向都行，直流用单向。</p>
+</div>
+
+<div class="card">
+  <h3>肖特基二极管 · SS34 <span class="tag">防接反</span></h3>
+  <p><b>干什么：</b>只让电流单向通过。串在正极上，接反时它截止，后端一点电都拿不到，也就不会炸。</p>
+  <p><b>为什么用"肖特基"而不是普通二极管：</b>压降只有 0.3~0.5V（普通硅管 0.7~1V）。我们 0.2A × 0.4V = 0.08W，可以忽略；如果用普通管，压降大、发热多，12V 跌到 11.5V 再进模块也更吃亏。</p>
+  <p><b>不装会怎样：</b>接线时手一抖把正负极接反，模块和开发板一起报废。装车改线时这很常见。</p>
+  <p class="dim">大电流场合（几安培）会用 P-MOS 理想二极管，压降 0.02V，但这里没必要。</p>
+</div>
+
+<div class="card">
+  <h3>电解电容 1000µF <span class="tag">储能 · 防重启</span></h3>
+  <p><b>干什么：</b>储能。ESP-NOW 发射瞬间，电流会从 0.2A 跳到 0.5A，持续几十~几百微秒。而电线本身有电感（大约 1µH/米），电流不能突变，这几微秒里模块来不及供上，电压就会瞬间塌陷。</p>
+  <p><b>不装会怎样：</b>电压塌陷到 ESP32 的复位阈值以下 → <b>莫名其妙重启</b>。现象是"骑一会儿重启一次""数传着数着断了"，看起来像固件 bug，其实全是电的问题。线越长越容易犯。</p>
+  <p><b>关键：装在负载端</b>（开发板旁边），不是装在模块输出端。要抵消的是"线"的电感，离负载越近越有效。</p>
+</div>
+
+<div class="card">
+  <h3>瓷片电容 0.1µF <span class="tag">滤高频</span></h3>
+  <p><b>干什么：</b>旁路高频噪声。降压模块内部以几百 kHz 开关，会产生几十 MHz 的振铃；电解电容因为自身等效电感（ESR/ESL），对这么快的信号"反应不过来"，所以并一颗小瓷片专门吃高频。</p>
+  <p><b>不装会怎样：</b>开关噪声会顺着电源线跑进 ESP32 和 CAN 收发器。CAN 对噪声更敏感，可能表现为偶发坏帧、丢包——同样很难查。</p>
+  <p><b>怎么接：</b>和电解<b>并联</b>，越靠近芯片引脚越好（几毫米）。</p>
+</div>
+
+<h2 id="p-nosolder">不想焊？全成品也能搭</h2>
+<p class="lead">不用画板，也不用焊贴片。把贴片器件换成「带引脚的直插件」，再用接线帽（Wago 221）拧起来就行。</p>
+
+<div class="card">
+  <h3>器件替换表</h3>
+  <table>
+    <tr><th>原方案（贴片，要焊）</th><th>换成（直插，能拧）</th></tr>
+    <tr><td>SMBJ18A（DO-214 贴片）</td><td><b>P6KE18A</b>（DO-15 轴向 600W）<br><span class="dim">白环那端接 +12V</span></td></tr>
+    <tr><td>SS34（SMA 贴片）</td><td><b>1N5822</b>（DO-41 轴向 3A）<br><span class="dim">白环朝负载</span></td></tr>
+    <tr><td>1000µF 贴片</td><td><b>引线式电解 1000µF/25V</b></td></tr>
+    <tr><td>保险丝座</td><td><b>带线汽车保险丝座</b>（片式）</td></tr>
+    <tr><td>PCB / 洞洞板</td><td><b>不需要</b>，用 Wago 221 或端子排</td></tr>
+  </table>
+  <p class="note">直插件的耐压和功率一点不比贴片差。P6KE18A 是 600W 系列，对付车载尖峰够用；我们只走 0.2A，1N5822 的 3A 额定绰绰有余。</p>
+</div>
+
+<div class="card">
+  <h3>只有 4 个节点要并</h3>
+  <pre>① 12V 进（OBD 16 脚）→ 保险 → TVS 正端 + 防反接阳极
+② 防反接阴极 + TVS 负端 → 模块 VIN+
+③ 模块 VIN− + OBD 4 脚 → 地
+④ 模块 5V/GND → 开发板</pre>
+  <p>每个节点一颗 Wago 221 就能压三根线，免工具、可反复拆。</p>
+</div>
+
+<div class="card">
+  <h3>更省事的两种做法</h3>
+  <p><b>A. 买“带保护”的模块</b><br>
+  有标注「防反接 / 防浪涌 / 带保险」的车载降压模块，买这种就只剩串一个保险。
+  买前看清详情页有没有真的写 TVS 和反接保护——很多只写“过流保护”，那是芯片自带的。</p>
+  <p><b>B. 成品 USB 输出模块 + USB 线接开发板</b><br>
+  如果模块自带 USB-A 输出（比如欣薇这块），<b>一根 USB-A 转 USB-C 线插开发板 COM 口</b>，
+  连开发板都不用接线，只剩「12V 进模块」两颗螺丝要拧。</p>
+</div>
+
+<div class="card">
+  <h3>你发的这块（欣薇 9–36V → 5.2V 5A）</h3>
+  <table>
+    <tr><th>参数</th><th>结论</th></tr>
+    <tr><td>输入 9–36V</td><td><span class="tag ok">够</span> 车上 12V，充电 14.5V，起动瞬时 9~10V</td></tr>
+    <tr><td>输出 5.2V / 5A</td><td><span class="tag ok">余量极大</span> 我们只要 0.2A，几乎不发热</td></tr>
+    <tr><td>同步整流</td><td><span class="tag ok">好</span> 轻载也稳</td></tr>
+    <tr><td>端子 / USB-A / 背面焊盘</td><td><span class="tag ok">免焊接线</span></td></tr>
+    <tr><td>保险 / TVS / 防反接</td><td><span class="tag warn">没有</span> 要自己串</td></tr>
+    <tr><td>静态电流</td><td><span class="tag warn">未标注</span> 必须实测</td></tr>
+  </table>
+
+  <h3 style="font-size:15px;margin-top:16px">三点提醒</h3>
+  <ul>
+    <li><b>5.2V 没问题。</b>开发板 LDO 吃得下，USB 规范也允许到 5.25V。</li>
+    <li><b>静态电流要量。</b>这类模块带 USB 识别芯片，空载可能吃 5~20mA。
+        我们深睡本来只有 15~20mA，模块再吃 15mA 就翻倍了。
+        量法：12V 输入串万用表 mA 档，不接负载。偏大就把取电点改成 ACC。</li>
+    <li><b>快充芯片不会乱升压。</b>它只对支持 QC 的设备协商 9V/12V，ESP32 不会发起协商，输出一直是 5V。</li>
+  </ul>
+</div>
+
+<h2 id="p-buy">买什么</h2>
+<p class="lead">下面已是<b>直插（免焊）</b>版本，配接线帽压接即可，不用烙铁。</p>
+
+<div class="card">
+  <h3>必需 <span class="tag">约 ¥60~90</span></h3>
+  <label class="ck"><input type="checkbox"><span>12V→5V 降压模块<span class="dim">（宽压 9~36V，固定 5V，≥2A）</span></span><span class="p">¥15~30</span></label>
+  <label class="ck"><input type="checkbox"><span>保险丝座 + 1A 保险丝<span class="dim">（备 0.5A / 2A 各一）</span></span><span class="p">¥5~10</span></label>
+  <label class="ck"><input type="checkbox"><span>TVS <b>P6KE18A</b>（直插）×3</span><span class="p">¥1~2/个</span></label>
+  <label class="ck"><input type="checkbox"><span>肖特基 <b>1N5822</b>（直插）×3</span><span class="p">¥0.5~1/个</span></label>
+  <label class="ck"><input type="checkbox"><span>引线电解 1000µF/25V ×2 + 瓷片 0.1µF ×2</span><span class="p">¥3</span></label>
+  <label class="ck"><input type="checkbox"><span>Wago 221 快速接线帽（3 孔）<span class="dim">（免焊关键件）</span></span><span class="p">¥10</span></label>
+  <label class="ck"><input type="checkbox"><span>热缩管 + 自粘防水胶带 + 扎带</span><span class="p">¥25</span></label>
+</div>
+
+<div class="card">
+  <h3>建议加 <span class="tag">好排查</span></h3>
+  <label class="ck"><input type="checkbox"><span>USB 电流表<span class="dim">（先量清实际功耗，再决定要不要加 ACC）</span></span><span class="p">¥15~25</span></label>
+  <label class="ck"><input type="checkbox"><span>直角 USB-C 短尾线 0.3m</span><span class="p">¥10~15</span></label>
+  <label class="ck"><input type="checkbox"><span>XT30 / JST-SM 插头 2 对<span class="dim">（做成可插拔）</span></span><span class="p">¥10</span></label>
+  <label class="ck"><input type="checkbox"><span>万用表（若没有）</span><span class="p">¥40~80</span></label>
+  <label class="ck"><input type="checkbox"><span>波纹管 / 编织套管 2m</span><span class="p">¥10</span></label>
+</div>
+
+<div class="card">
+  <h3>只在"长期停放"时需要</h3>
+  <label class="ck"><input type="checkbox"><span>汽车继电器 + 继电器座<span class="dim">（12V，ACC 做使能）</span></span><span class="p">¥10~15</span></label>
+  <label class="ck"><input type="checkbox"><span>保险盒取电器<span class="dim">（按车上保险片尺寸：mini/小号/微型）</span></span><span class="p">¥15~25</span></label>
+  <label class="ck"><input type="checkbox"><span>压线钳 + 端子<span class="dim">（没把握就焊）</span></span><span class="p">¥30~50</span></label>
+</div>
+
+<p class="dim" style="font-size:13px">参考价为淘宝大致区间（2026-11），实际以下单页为准。已有的不用买：开发板、SN65HVD230、16 针 OBD 公头带尾线、充电宝。</p>
+
+<h2 id="p-measure">装车前量 4 个数（5 分钟）</h2>
+
+<div class="card">
+  <table>
+    <tr><th>量什么</th><th>怎么量</th><th>结论</th></tr>
+    <tr><td>OBD 16 脚熄火后有没有 12V</td><td>DC 档，16 对 4</td><td>有 → 常电（要配休眠）；没有 → 等于自带 ACC</td></tr>
+    <tr><td>ACC 保险位</td><td>钥匙 OFF / ON 各量一次</td><td>0V → 12V 才是真 ACC</td></tr>
+    <tr><td>起动瞬间最低电压</td><td>表笔夹 16/4，按启动</td><td>低于 9V 模块可能重启</td></tr>
+    <tr><td>整机静态电流</td><td>串在 5V 线（或 USB 电流表）</td><td>关掉演示模式，等 60 秒入睡后量</td></tr>
+  </table>
+  <p class="note">先量这 4 个数再下单：<b>16 脚是不是常电，会直接改变方案选择。</b></p>
+</div>
+
+<h2 id="p-screen">圆屏（接收端）怎么供电</h2>
+
+<p>圆屏<b>没有休眠逻辑</b>，所以不能挂常电。</p>
+
+<table>
+  <tr><th>方案</th><th>优点</th><th>缺点</th></tr>
+  <tr><td><b>A. 自带电池</b><br><span class="dim">充电宝/18650 + 升压板</span></td><td>停车带走防盗；不用走线</td><td>要记得充电</td></tr>
+  <tr><td><b>B. 车上 5V</b><br><span class="dim">从座桶 5V 母线拉一根</span></td><td>永不断电</td><td>要走 1.5~2m 线；<b>必须从 ACC 取</b>否则耗电瓶；要防水</td></tr>
+  <tr><td><b>C. B + 加休眠</b></td><td>最省心</td><td>要改固件（约半天）</td></tr>
+</table>
+
+<p>先按 A 用；觉得每次插拔麻烦，再做 C。</p>
+
+<h2>风险清单</h2>
+<div class="danger">
+<b>保修</b> 破线（B2）可能影响保修，B1 / OBD 取电影响最小。<br>
+<b>安全</b> 所有正极必须过保险；接头必须绝缘；远离排气管和运动件。<br>
+<b>防水</b> 座桶雨天会进水汽，电子件装防水盒，插头朝下。<br>
+<b>震动</b> 插头、端子必须有机械固定，不能只靠插拔力。<br>
+<b>调试</b> 所有接线在熄火状态完成，上电前用万用表确认没有短路。
+</div>
+
+<p class="foot">对应固件 v0.1-alpha · 开发细节见 docs/dev-guide.md</p>
+
+
+</div>
+
+<script>
+function sw(k, el){
+  document.getElementById('t-wiring').hidden = (k !== 'wiring');
+  document.getElementById('t-power').hidden  = (k !== 'power');
+  document.querySelectorAll('.tb').forEach(function(b){ b.classList.remove('on'); });
+  el.classList.add('on');
+  window.scrollTo(0, 0);
+}
+</script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # 装车供电方案（v0.1-alpha 之后）
 
-> 手机上看这个：`docs/power/index.html`（同一份内容的网页版，带接线图）
+> 手机上看这个：`docs/wiring/index.html` 的「供电方案」页签（在线版 https://fiddle5-power.app.workbuddy.host/?sharecode=DHQUOMCSMD ）
 
 > 面向：SYM Fiddle 5 踏板，车上 12V 系统，OBD 为**标准 16 针**（4/5 地、16 常电、6/14 CAN）。
 > 现在：充电宝 + USB-C 供电。目标：做成"插上就一直能用"的车载件。

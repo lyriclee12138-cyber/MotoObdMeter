@@ -2,7 +2,7 @@
 
 > 项目：SYM Fiddle 5 踏板车用的圆屏仪表（CAN/OBD → ESP-NOW → 圆屏）
 > 当前版本：**v0.1-alpha**（收发两端上机验证通过，待实车测试）
-> 这份文档是唯一入口。变更历史看 `CHANGELOG.md`，供电方案看 `docs/power-plan.md`（手机版 `docs/power/index.html`）。
+> 这份文档是唯一入口。变更历史看 `CHANGELOG.md`，供电方案看 `docs/power-plan.md`（手机版在 `docs/wiring/index.html` 的「供电方案」页签）。
 
 ---
 
@@ -38,7 +38,7 @@ symFiddle5OBD/
 ├── CHANGELOG.md               版本记录（用户能看见的变化 + 结构性坑）
 ├── docs/
 │   ├── power-plan.md          装车供电方案
-│   ├── power/index.html       同一内容的手机版（带接线图）
+│   ├── power/index.html       供电方案源文件（已合并进 wiring/index.html）
 │   ├── sender-wiring.md       接线表（模块↔开发板↔OBD）
 │   ├── UI规格-beta.html       界面规格锁定表
 │   └── gauge-ui-beta.html     界面基线（可交互，LOCKED）
