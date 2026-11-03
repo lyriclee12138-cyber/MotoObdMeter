@@ -84,13 +84,15 @@ static void led_off(void)
     led_rgb(0, 0, 0, 0);
 }
 
-/* 呼吸：余弦缓入缓出，最低留一点不熄灭 */
+/* 呼吸：整数三角波，**故意不用浮点**。
+ * ESP32-S3 上任务里的浮点依赖 FPU 上下文保存，某些 FreeRTOS 配置下
+ * 自定义任务做浮点运算会直接崩（panic 循环）。亮度曲线差一点点无所谓。 */
 static void breath(void)
 {
     const uint32_t phase = now_ms() % BREATH_MS;
-    const float x = (float)phase / (float)BREATH_MS;
-    const float k = (1.0f - cosf(x * 6.2831853f)) * 0.5f;
-    const uint8_t scale = (uint8_t)(8 + 247.0f * k);
+    uint32_t k = (phase < (BREATH_MS / 2)) ? (phase * 2) : ((BREATH_MS - phase) * 2);
+    /* k: 0..BREATH_MS → 亮度 8..255 */
+    const uint8_t scale = (uint8_t)(8u + (247u * k) / BREATH_MS);
     led_rgb(C_NO_LINK_R, C_NO_LINK_G, C_NO_LINK_B, scale);
 }
 
@@ -154,18 +156,24 @@ static void led_task(void *arg)
 
 void status_led_init(void)
 {
+#if !LED_ENABLE
+    ESP_LOGW(TAG, "状态灯已禁用（LED_ENABLE=0）");
+    return;
+#endif
 #if LED_USE_WS2812
     rmt_tx_channel_config_t ch = {
         .gpio_num          = LED_GPIO,
         .clk_src           = RMT_CLK_SRC_DEFAULT,
         .resolution_hz     = 10000000,      /* 10MHz → 0.1us/tick */
-        .mem_block_symbols = 48,
+        .mem_block_symbols = 64,
         .trans_queue_depth = 4,
     };
-    if (rmt_new_tx_channel(&ch, &s_chan) != ESP_OK) {
-        ESP_LOGW(TAG, "RMT 通道创建失败（GPIO%d 被占用？）", LED_GPIO);
+    esp_err_t e = rmt_new_tx_channel(&ch, &s_chan);
+    if (e != ESP_OK) {
+        ESP_LOGE(TAG, "RMT 通道创建失败: %s（GPIO%d）", esp_err_to_name(e), LED_GPIO);
         return;
     }
+    ESP_LOGI(TAG, "[1/3] RMT 通道 OK");
 
     /* WS2812 单总线时序 @10MHz：
      *   0 码 = 高 0.4us + 低 0.9us
@@ -176,14 +184,18 @@ void status_led_init(void)
         .bit1 = { .level0 = 1, .duration0 = 8, .level1 = 0, .duration1 = 5 },
         .flags = { .msb_first = 1 },
     };
-    if (rmt_new_bytes_encoder(&be, &s_enc) != ESP_OK) {
-        ESP_LOGW(TAG, "RMT 编码器创建失败");
+    e = rmt_new_bytes_encoder(&be, &s_enc);
+    if (e != ESP_OK) {
+        ESP_LOGE(TAG, "RMT 编码器创建失败: %s", esp_err_to_name(e));
         return;
     }
-    if (rmt_enable(s_chan) != ESP_OK) {
-        ESP_LOGW(TAG, "RMT 使能失败");
+    ESP_LOGI(TAG, "[2/3] 编码器 OK");
+    e = rmt_enable(s_chan);
+    if (e != ESP_OK) {
+        ESP_LOGE(TAG, "RMT 使能失败: %s", esp_err_to_name(e));
         return;
     }
+    ESP_LOGI(TAG, "[3/3] RMT 使能 OK");
 #else
     ledc_timer_config_t tc = {
         .speed_mode      = LEDC_LOW_SPEED_MODE,
@@ -216,12 +228,16 @@ void status_led_init(void)
     s_flash_left  = 2;
     s_flash_start = now_ms();
 
-    xTaskCreate(led_task, "status_led", 3072, NULL, 3, NULL);
+    xTaskCreate(led_task, "status_led", 4096, NULL, 3, NULL);
     ESP_LOGI(TAG, "状态灯就绪（GPIO%d，%s）", LED_GPIO,
              LED_USE_WS2812 ? "WS2812 RGB" : "单色 LED");
 }
 
 void status_led_set(led_state_t st)
 {
+#if LED_ENABLE
     s_want = st;
+#else
+    (void)st;
+#endif
 }
