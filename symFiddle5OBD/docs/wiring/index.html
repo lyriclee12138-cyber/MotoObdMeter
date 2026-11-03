@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>全车接线图 · fiddle5 圆屏仪表</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --text:#16181d; --sub:#5d6470;
+    --line:#e3e6ea; --accent:#2f6fed; --accent-bg:#eaf1ff;
+    --warn:#c2410c; --warn-bg:#fff4ec; --ok:#0f7b4f; --ok-bg:#eafaf1;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d0f12; --card:#171a1f; --text:#e8eaee; --sub:#98a0ac;
+      --line:#282d35; --accent:#6fa0ff; --accent-bg:#182234;
+      --warn:#ff9b62; --warn-bg:#2a1c13; --ok:#5ddba0; --ok-bg:#12251c;
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:0 14px 60px;background:var(--bg);color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    max-width:720px;margin-inline:auto}
+  h1{font-size:22px;line-height:1.35;margin:26px 0 6px;letter-spacing:-.2px}
+  h2{font-size:18px;margin:34px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:20px 0 8px}
+  p{margin:10px 0}
+  .lead{color:var(--sub);font-size:14.5px;margin-top:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin:12px 0}
+  .card h3{margin-top:0}
+  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-bg);color:var(--accent);font-weight:600;vertical-align:middle}
+  nav{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 8px}
+  nav a{font-size:13px;text-decoration:none;color:var(--text);background:var(--card);
+        border:1px solid var(--line);border-radius:99px;padding:6px 12px}
+  ul{padding-left:20px;margin:8px 0}
+  li{margin:5px 0}
+  code{font-family:var(--mono);font-size:13px;background:var(--accent-bg);padding:1px 5px;border-radius:5px}
+  pre{font-family:var(--mono);font-size:12.5px;line-height:1.7;background:var(--card);
+      border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto;margin:10px 0}
+  .note{font-size:13.5px;color:var(--sub);border-left:3px solid var(--accent);padding-left:11px;margin:12px 0}
+  .warnbox{background:var(--warn-bg);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:14.5px}
+  .okbox{background:var(--ok-bg);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:14.5px}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--sub);font-weight:600;font-size:13px}
+  th:first-child,td:first-child{white-space:nowrap}
+  td code{background:none;padding:0}
+  .dim{color:var(--sub)}
+  svg{display:block;width:100%;height:auto}
+  .swrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 6px;margin:12px 0}
+  .flow{margin:12px 0}
+  .flow .step{background:var(--card);border:1px solid var(--line);border-radius:12px;
+              padding:10px 13px;font-size:14.5px;display:flex;gap:9px;align-items:baseline}
+  .flow .step .n{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .flow .ar{text-align:center;color:var(--sub);font-size:15px;line-height:1.1;margin:1px 0}
+  .flow .step.p{border-left:3px solid #2f6fed}
+  .flow .step.s{border-left:3px solid #7c4dff}
+  .foot{margin-top:34px;font-size:13px;color:var(--sub);text-align:center}
+</style>
+</head>
+<body>
+
+<h1>全车接线图</h1>
+<p class="lead">电源走 <b>ACC</b>，OBD 只做信号<br>fiddle5 圆屏仪表 · 发送端 · 2026-11-03</p>
+
+<nav>
+  <a href="#flow">一眼看懂</a>
+  <a href="#pwr">电源链</a>
+  <a href="#sig">信号链</a>
+  <a href="#table">线表</a>
+  <a href="#steps">接线顺序</a>
+  <a href="#check">验收</a>
+  <a href="#notes">注意</a>
+</nav>
+
+<div class="okbox">
+<b>为什么这样最省心：</b>从 ACC 取电后，OBD 插头<b>只接 CANH / CANL / 信号地，不接 16 脚常电</b>。
+熄火 = ACC 断电 = 整机彻底断电，静态耗电归零，不用再算电瓶能撑几天。
+</div>
+
+<h2 id="flow">一眼看懂</h2>
+
+<div class="flow">
+  <div class="step p"><span class="n">01</span><div><b>ACC</b> <span class="dim">钥匙 ON 才有 12V</span></div></div>
+  <div class="ar">↓</div>
+  <div class="step p"><span class="n">02</span><div><b>保险丝 1A</b> <span class="dim">短路时熔断，保护整段线</span></div></div>
+  <div class="ar">↓</div>
+  <div class="step p"><span class="n">03</span><div><b>TVS P6KE18CA</b> <span class="dim">并联到地，削掉打火尖峰</span></div></div>
+  <div class="ar">↓</div>
+  <div class="step p"><span class="n">04</span><div><b>1N5822 防反接</b> <span class="dim">串在正极，接反不通</span></div></div>
+  <div class="ar">↓</div>
+  <div class="step p"><span class="n">05</span><div><b>DC-DC 降压模块</b> <span class="dim">9~36V 进 · 5.2V 5A 出</span></div></div>
+  <div class="ar">↓</div>
+  <div class="step p"><span class="n">06</span><div><b>USB-A → USB-C</b> <span class="dim">插开发板 COM 口</span></div></div>
+  <div class="ar">↓</div>
+  <div class="step s"><span class="n">07</span><div><b>ESP32-S3 开发板</b> <span class="dim">3V3 / GND / GPIO4 / GPIO5</span></div></div>
+  <div class="ar">↓</div>
+  <div class="step s"><span class="n">08</span><div><b>SN65HVD230</b> <span class="dim">3.3V CAN 收发器</span></div></div>
+  <div class="ar">↓</div>
+  <div class="step s"><span class="n">09</span><div><b>OBD 6 / 14 / 5</b> <span class="dim">CANH / CANL / 信号地</span></div></div>
+</div>
+
+<h2 id="pwr">电源链</h2>
+
+<div class="swrap">
+<svg viewBox="0 0 360 500" role="img" aria-label="ACC 取电到开发板的电源链路">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a919d"/></marker>
+  </defs>
+  <g font-family="-apple-system,PingFang SC,sans-serif">
+
+  <rect x="16" y="8" width="190" height="46" rx="10" fill="#e8efff" stroke="#2f6fed" stroke-width="1.3"/>
+  <text x="111" y="28" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1c4fc4">ACC 12V</text>
+  <text x="111" y="45" text-anchor="middle" font-size="10.5" fill="#4a6fbf">钥匙 ON 才有 · 充电时 14.5V</text>
+
+  <rect x="228" y="8" width="118" height="46" rx="10" fill="#f2f4f7" stroke="#b9c0cb"/>
+  <text x="287" y="28" text-anchor="middle" font-size="13.5" font-weight="700" fill="#4a515e">车身搭铁</text>
+  <text x="287" y="45" text-anchor="middle" font-size="10.5" fill="#7a828f">GND</text>
+
+  <g stroke="#8a919d" stroke-width="1.6" fill="none" marker-end="url(#a1)">
+    <path d="M111 54 L111 70"/>
+    <path d="M111 116 L111 132"/>
+    <path d="M111 180 L111 196"/>
+    <path d="M111 244 L111 260"/>
+    <path d="M111 314 L111 330"/>
+    <path d="M111 374 L111 390"/>
+  </g>
+
+  <rect x="16" y="70" width="190" height="46" rx="10" fill="#fff" stroke="#c9ced7"/>
+  <text x="111" y="90" text-anchor="middle" font-size="13.5" font-weight="600">保险丝 1A</text>
+  <text x="111" y="107" text-anchor="middle" font-size="10.5" fill="#8a919d">越靠近取电点越好</text>
+
+  <rect x="16" y="132" width="190" height="48" rx="10" fill="#fff4ec" stroke="#e8712f"/>
+  <text x="111" y="153" text-anchor="middle" font-size="13.5" font-weight="600">TVS P6KE18CA</text>
+  <text x="111" y="170" text-anchor="middle" font-size="10.5" fill="#b35c26">并联 · 一端接正一端接地</text>
+
+  <rect x="16" y="196" width="190" height="48" rx="10" fill="#fff4ec" stroke="#e8712f"/>
+  <text x="111" y="217" text-anchor="middle" font-size="13.5" font-weight="600">1N5822 防反接</text>
+  <text x="111" y="234" text-anchor="middle" font-size="10.5" fill="#b35c26">串联 · 白环朝模块</text>
+
+  <rect x="16" y="260" width="190" height="54" rx="10" fill="#e8efff" stroke="#2f6fed" stroke-width="1.3"/>
+  <text x="111" y="281" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1c4fc4">DC-DC 降压模块</text>
+  <text x="111" y="298" text-anchor="middle" font-size="10.5" fill="#4a6fbf">9~36V 进 / 5.2V 5A 出</text>
+
+  <rect x="16" y="330" width="190" height="44" rx="10" fill="#fff" stroke="#c9ced7" stroke-dasharray="5 3"/>
+  <text x="111" y="350" text-anchor="middle" font-size="13" font-weight="600">USB-A 输出</text>
+  <text x="111" y="366" text-anchor="middle" font-size="10.5" fill="#8a919d">用 USB 线当电源线</text>
+
+  <rect x="16" y="390" width="190" height="50" rx="10" fill="#eafaf1" stroke="#0f7b4f" stroke-width="1.3"/>
+  <text x="111" y="411" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0b5f3d">开发板 COM 口</text>
+  <text x="111" y="428" text-anchor="middle" font-size="10.5" fill="#16764f">USB-C · 只取电，数据不用</text>
+
+  <path d="M287 54 L287 300" stroke="#8a919d" stroke-width="1.6" fill="none"/>
+  <path d="M206 156 L287 156" stroke="#8a919d" stroke-width="1.6" fill="none"/>
+  <path d="M206 287 L287 287" stroke="#8a919d" stroke-width="1.6" fill="none"/>
+  <circle cx="287" cy="156" r="2.6" fill="#8a919d"/>
+  <circle cx="287" cy="287" r="2.6" fill="#8a919d"/>
+  <text x="287" y="320" text-anchor="middle" font-size="10.5" fill="#8a919d">模块 VIN−</text>
+  <text x="287" y="335" text-anchor="middle" font-size="10.5" fill="#8a919d">= 同一个地</text>
+
+  <text x="16" y="462" font-size="10.5" fill="#8a919d">橙框 = 保护件 · 虚线框 = 现成 USB 线，不用接线</text>
+  <text x="16" y="478" font-size="10.5" fill="#8a919d">开发板的地通过 USB 线自动共地，不用额外拉线</text>
+  </g>
+</svg>
+</div>
+
+<p class="note">顺序不能换：<b>保险在最前</b>（保护整段线），TVS 在保险之后（这样它自己也被保险保护），然后才是防反接和模块。</p>
+
+<h2 id="sig">信号链</h2>
+
+<div class="swrap">
+<svg viewBox="0 0 360 400" role="img" aria-label="开发板到 CAN 收发器到 OBD 的信号链路">
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a919d"/></marker>
+  </defs>
+  <g font-family="-apple-system,PingFang SC,sans-serif">
+
+  <rect x="20" y="8" width="320" height="56" rx="10" fill="#f1ecff" stroke="#7c4dff" stroke-width="1.3"/>
+  <text x="180" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#5b32c9">ESP32-S3 开发板</text>
+  <text x="180" y="48" text-anchor="middle" font-size="10.5" fill="#7a5ecf">USB-C 供电 · 装在座桶里</text>
+
+  <path d="M90 64 L90 124" stroke="#8a919d" stroke-width="1.6" fill="none" marker-end="url(#a2)"/>
+  <text x="104" y="86" font-size="11.5" font-weight="600">4 根线</text>
+  <text x="104" y="103" font-size="10.5" fill="#8a919d">3V3 · GND · GPIO4 · GPIO5</text>
+
+  <rect x="20" y="124" width="320" height="60" rx="10" fill="#f1ecff" stroke="#7c4dff" stroke-width="1.3"/>
+  <text x="180" y="146" text-anchor="middle" font-size="14" font-weight="700" fill="#5b32c9">SN65HVD230</text>
+  <text x="180" y="163" text-anchor="middle" font-size="10.5" fill="#7a5ecf">必须 3.3V 版 · RS 接 GND 才是高速模式</text>
+
+  <path d="M80 184 L80 268" stroke="#8a919d" stroke-width="1.6" fill="none" marker-end="url(#a2)"/>
+  <path d="M140 184 L140 268" stroke="#8a919d" stroke-width="1.6" fill="none" marker-end="url(#a2)"/>
+  <path d="M262 184 L262 268" stroke="#8a919d" stroke-width="1.6" fill="none" marker-end="url(#a2)"/>
+  <text x="74" y="208" text-anchor="end" font-size="11" font-weight="600">CANH</text>
+  <text x="134" y="208" text-anchor="end" font-size="11" font-weight="600">CANL</text>
+  <text x="256" y="208" text-anchor="end" font-size="11" font-weight="600">GND</text>
+
+  <rect x="62" y="220" width="96" height="24" rx="12" fill="none" stroke="#7c4dff" stroke-dasharray="4 3"/>
+  <text x="110" y="236" text-anchor="middle" font-size="10" fill="#6b3ee8">双绞 &lt;30cm</text>
+
+  <rect x="20" y="268" width="320" height="88" rx="10" fill="#fff" stroke="#c9ced7"/>
+  <text x="180" y="288" text-anchor="middle" font-size="13" font-weight="700">OBD 16 针插头</text>
+  <text x="40" y="310" font-size="12">6 脚</text><text x="86" y="310" font-size="11.5" fill="#8a919d">CAN-H</text>
+  <text x="40" y="329" font-size="12">14 脚</text><text x="86" y="329" font-size="11.5" fill="#8a919d">CAN-L</text>
+  <text x="40" y="348" font-size="12">5 脚</text><text x="86" y="348" font-size="11.5" fill="#8a919d">信号地（CAN 参考地）</text>
+  <text x="250" y="310" font-size="10.5" fill="#c2410c">不接 16 脚</text>
+  <text x="250" y="325" font-size="10.5" fill="#c2410c">（不取常电）</text>
+
+  <text x="20" y="376" font-size="10.5" fill="#8a919d">收发器不要交叉：模块 TX → GPIO4，模块 RX → GPIO5</text>
+  <text x="20" y="392" font-size="10.5" fill="#8a919d">RS 悬空会进待机，完全收不到帧</text>
+  </g>
+</svg>
+</div>
+
+<h2 id="table">线表</h2>
+
+<div class="card">
+  <h3>电源 · 6 个连接点</h3>
+  <table>
+    <tr><th>从</th><th>到</th><th>说明</th></tr>
+    <tr><td>ACC 取电点</td><td>保险丝座 一端</td><td>保险尽量靠近取电点</td></tr>
+    <tr><td>保险丝座 另一端</td><td>1N5822 <b>阳极</b>（无白环）</td><td>串在正极</td></tr>
+    <tr><td>1N5822 <b>阴极</b>（白环）</td><td>模块 <b>VIN+</b></td><td></td></tr>
+    <tr><td>车身搭铁</td><td>模块 <b>VIN−</b></td><td>接地点要打磨露金属</td></tr>
+    <tr><td>TVS 两根引脚</td><td>VIN+ 与 VIN−</td><td>与上面两根线共用螺丝</td></tr>
+    <tr><td>模块 <b>USB-A</b></td><td>开发板 <b>COM 口</b></td><td>USB-A 转 C 线</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>信号 · 开发板 ↔ 收发器</h3>
+  <table>
+    <tr><th>开发板</th><th>收发器</th></tr>
+    <tr><td><code>3V3</code></td><td><code>VCC</code> <span class="dim">（绝不能接 5V，会烧）</span></td></tr>
+    <tr><td><code>GND</code></td><td><code>GND</code></td></tr>
+    <tr><td><code>GPIO4</code></td><td><code>TX / CTX / D</code></td></tr>
+    <tr><td><code>GPIO5</code></td><td><code>RX / CRX / R</code></td></tr>
+    <tr><td><code>GND</code></td><td><code>RS / STB / S</code> <span class="dim">（不接就待机）</span></td></tr>
+  </table>
+  <table style="margin-top:12px">
+    <tr><th>收发器</th><th>OBD 16 针</th></tr>
+    <tr><td><code>CANH</code></td><td><b>6</b></td></tr>
+    <tr><td><code>CANL</code></td><td><b>14</b></td></tr>
+    <tr><td><code>GND</code></td><td><b>5</b> <span class="dim">（信号地）</span></td></tr>
+  </table>
+</div>
+
+<h2 id="steps">接线顺序（不用烙铁）</h2>
+
+<div class="card">
+  <ol style="padding-left:20px;margin:6px 0">
+    <li>ACC 取电点焊/压好一根线，串上<b>带线保险丝座</b>（1A）。</li>
+    <li>保险出线 → 1N5822 阳极；二极管阴极 → 模块 <b>VIN+</b> 螺丝端子。</li>
+    <li>车身搭铁 → 模块 <b>VIN−</b> 螺丝端子。</li>
+    <li>TVS 两根引脚分别塞进 VIN+ / VIN−，和上面的线共用同一个螺丝。</li>
+    <li>模块 USB-A ── USB 线 ──> 开发板 COM 口。</li>
+    <li>开发板 3V3/GND/GPIO4/GPIO5 → 收发器（4 根杜邦线）。</li>
+    <li>收发器 CANH/CANL 双绞后 → OBD 6 / 14；收发器 GND → OBD 5。</li>
+  </ol>
+  <p class="note">接线帽（Wago 221）只在第 2 步的“保险出线 ↔ 二极管”那一处用得上；其余全是螺丝端子或杜邦线。</p>
+</div>
+
+<h2 id="check">上电前验收</h2>
+
+<div class="warnbox">
+<b>一定要先量，再插开发板：</b>
+</div>
+
+<div class="card">
+  <table>
+    <tr><th>量什么</th><th>正常值</th><th>不对说明</th></tr>
+    <tr><td>模块 VIN+ 对 VIN−</td><td>钥匙 ON ≈ 12V（+）</td><td>量到 −12V = 接反了</td></tr>
+    <tr><td>模块 5V 对 GND</td><td>5.0~5.3V</td><td>0V = 保险烧了 / 二极管接反</td></tr>
+    <tr><td>钥匙 OFF 时模块 5V</td><td>0V</td><td>不是 0V = 取的不是 ACC</td></tr>
+    <tr><td>开发板串口</td><td><code>=== Fiddle5 OBD sender ===</code></td><td>无输出 = 供电或板子问题</td></tr>
+  </table>
+</div>
+
+<h2 id="notes">几个必须注意的点</h2>
+
+<div class="card">
+  <h3>ACC 特有的</h3>
+  <ul>
+    <li><b>起动瞬间电压会掉到 9~10V</b>。模块输入下限是 9V，可能瞬间重启。
+        不影响使用（车一发动就恢复），但别在打火那一瞬间判断“设备坏了”。</li>
+    <li><b>一定要取“开关后”的 ACC</b>，别取到常电。判断方法：钥匙 OFF 时量应为 0V。</li>
+    <li><b>保险放在取电点附近</b>，不要放在模块旁边——否则中间这段线短路时没有保护。</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>接地</h3>
+  <ul>
+    <li>电源地接<b>车身搭铁</b>，接地点要打磨露出金属，拧紧后抹点防锈。</li>
+    <li>OBD 5 脚（信号地）接到<b>同一个接地点</b>，别另找地方——两点接地会形成环路，容易引噪声。</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>走线与防水</h3>
+  <ul>
+    <li>CANH/CANL 双绞、长度 &lt;30cm、远离降压模块的电感。</li>
+    <li>整套装防水盒，插头朝下；线束用扎带固定，别只靠插拔力。</li>
+    <li>模块和开发板之间那根 USB 线要固定，长期震动容易松。</li>
+  </ul>
+</div>
+
+<p class="foot">对应固件 v0.1-alpha · 方案细节见 docs/power-plan.md</p>
+
+</body>
+</html>
