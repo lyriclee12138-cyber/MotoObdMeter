@@ -29,3 +29,7 @@ CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 # 与接收端对齐：调试优化(-Og)下启动会卡在 cpu_start，改 PERF
 CONFIG_COMPILER_OPTIMIZATION_PERF=y
 CONFIG_FREERTOS_HZ=1000
+
+# 发送端不需要 8MB PSRAM（CAN 轮询几百 KB 就够）。
+# 打开时 PERF 优化下会崩在 esp_psram_impl_enable，关掉排除这个变量。
+# CONFIG_SPIRAM is not set
