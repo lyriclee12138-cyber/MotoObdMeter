@@ -20,6 +20,7 @@ typedef struct {
     lv_color_t bad;         /* 未连接 */
     lv_color_t dim;         /* 提示字 */
     lv_color_t gauge_temp;  /* 表盘水温数字（正常态） */
+    lv_color_t track;       /* 表盘进度环的空槽底色，必须与背景图里烘焙的一致 */
 } ui_palette_t;
 
 void ui_theme_init(void);                       /* 从 NVS 读，没有就用白天 */

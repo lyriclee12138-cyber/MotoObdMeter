@@ -22,10 +22,12 @@ static const char *UI_TAG = "ui";
 #define ANG_START    (-135.0f)
 #define ANG_SPAN     (270.0f)
 
-/* lv_draw_arc 的 radius 是**外**半径，所以中心线 = 200 - 11/2 = 194.5 */
-#define ARC_R_OUT    200
+/* lv_draw_arc 的 radius 是**外**半径。
+ * 194/11 → 带 183..194，与背景图里烘焙的轨道和彩环完全重合。
+ * （早先是 200，比烘焙的轨道外扩 6px，彩色弧看着浮在轨道外面。） */
+#define ARC_R_OUT    194
 #define ARC_W        11
-#define ARC_R_MID    (ARC_R_OUT - ARC_W / 2.0f)
+#define ARC_R_MID    (ARC_R_OUT - ARC_W / 2.0f)     /* 188.5 */
 
 /* 文字位置（屏幕绝对 y）。这些数字是素材渲染时就定好的，别随手改。 */
 #define Y_RPM        208
@@ -51,6 +53,7 @@ static uint16_t s_last_rpm = 0xFFFF;
 static int8_t   s_last_clt = INT8_MAX;
 static float    s_shown;      /* 平滑后的转速，画弧用这个 */
 static bool     s_first = true;
+static bool     s_need_full = true;   /* 首帧要把整条彩环擦一遍（见 ui_gauge_update） */
 static bool     s_visible = true;
 
 /* ---------- 颜色 ---------- */
@@ -105,65 +108,74 @@ static lv_color_t temp_color(int8_t c)
     return ui_palette()->text;
 }
 
-/* ---------- 进度弧（自绘） ---------- */
-/* 弧按位置分段绘制：每 1000 rpm 一段（正好和刻度数字 0-10 对齐），
- * 段内单色，整条弧看起来就是随位置渐变的。
- * 段边界用同一个整数角度，所以相邻段严丝合缝，不会露缝。 */
-#define ARC_SEGS     10
-
+/* ---------- 进度弧（自绘） ----------
+ *
+ * **颜色不再由运行时计算，而是烘焙进背景图。**
+ *
+ * 背景图（gauge_art_v2.py 渲染）里已经有一条完整的绿→黄→红彩环。
+ * 每帧只做两件事：
+ *   1. 用轨道底色画一条「当前转速 → 满量程」的弧，把还没到的部分擦掉；
+ *   2. 在针尖处画一个圆，做出圆头。
+ *
+ * 为什么这么改（踩过两次，别再退回分段着色）：
+ * 弧是靠脏区增量重绘的，每帧只重画转速变化扫过的那一小段。早先的写法是
+ * 「每 1000 转画一段、段色由该段位置算出」，只要某一帧的重绘范围和绘制内容
+ * 错开半个身位，错误颜色就会永久留在屏上——表现就是低转速区残留橘黄、
+ * 弧中间断一节，而且怎么改颜色函数都没用。
+ * 现在每个角度的颜色是像素自带的，重绘时机再错也只会表现为「弧长了一点」
+ * 或「短了一点」，不可能把红画到低速区。
+ */
 static void arc_draw_cb(lv_event_t *e)
 {
     lv_layer_t *layer = lv_event_get_layer(e);
     lv_obj_t *obj = lv_event_get_target(e);
 
     float frac = s_shown / (float)RPM_MAX;
-    if (frac <= 0.003f) {
-        return;                              /* 熄火时不画，留一圈底弧就行 */
+    if (frac < 0.0f) {
+        frac = 0.0f;
     }
     if (frac > 1.0f) {
         frac = 1.0f;
     }
 
-    /* 圆心要用对象的**绝对**坐标：翻页动画里整个页面会横向位移，
-     * 写死 (233,233) 的话弧会钉在屏幕上不跟着页面走。 */
+    /* 圆心要用对象的**绝对**坐标：翻页动画里整个页面会横向位移。
+     * 角度换算 a = θ - 90（θ 是「12 点为 0、顺时针」，a 是 LVGL 的「3 点为 0」），
+     * 起点 θ=-135°（左下 7:30）→ a=135°。 */
     lv_area_t coords;
     lv_obj_get_coords(obj, &coords);
+    const int32_t cx = coords.x1 + (int32_t)CX;
+    const int32_t cy = coords.y1 + (int32_t)CY;
 
-    /* 角度换算：我们的 θ 是「12 点为 0、顺时针」，LVGL 的 a 是「3 点为 0、顺时针」。
-     * 两者指同一个点：x = CX + r·sinθ = CX + r·cos a，y = CY - r·cosθ = CY + r·sin a
-     * → a = θ - 90。
-     * 起始 θ = -135°（左下 7:30）→ a = -225° ≡ **135°**。 */
-    const int32_t a_start = 135;
-
-    int segs = (int)(frac * ARC_SEGS + 0.999f);
-    if (segs < 1) {
-        segs = 1;
+    /* 1. 擦掉未填充的部分 */
+    if (frac < 0.999f) {
+        lv_draw_arc_dsc_t ad;
+        lv_draw_arc_dsc_init(&ad);
+        ad.center.x = cx;
+        ad.center.y = cy;
+        ad.radius = ARC_R_OUT;
+        ad.width = ARC_W;
+        ad.color = ui_palette()->track;
+        ad.opa = LV_OPA_COVER;
+        ad.rounded = 0;                                  /* 方口，圆头交给第 2 步 */
+        ad.start_angle = 135 + (int32_t)(ANG_SPAN * frac);
+        ad.end_angle = 405;       /* 135+270；>360 由底层取模后按跨过 0° 处理 */
+        lv_draw_arc(layer, &ad);
     }
 
-    for (int i = 0; i < segs; i++) {
-        float p0 = (float)i / (float)ARC_SEGS;
-        float p1 = (float)(i + 1) / (float)ARC_SEGS;
-        if (p1 > frac) {
-            p1 = frac;
-        }
-        if (p1 - p0 < 0.001f) {
-            continue;
-        }
+    /* 2. 针尖圆头：直径等于轨道宽度，压在擦除弧的方口上 */
+    if (frac > 0.001f) {
+        const float rad = (ANG_START + ANG_SPAN * frac) * 0.017453292f;
+        const int32_t px = cx + (int32_t)lroundf(ARC_R_MID * sinf(rad));
+        const int32_t py = cy - (int32_t)lroundf(ARC_R_MID * cosf(rad));
+        const int32_t r = ARC_W / 2;
 
-        lv_draw_arc_dsc_t dsc;
-        lv_draw_arc_dsc_init(&dsc);
-        dsc.center.x = coords.x1 + (int32_t)CX;
-        dsc.center.y = coords.y1 + (int32_t)CY;
-        dsc.radius = ARC_R_OUT;
-        dsc.width = ARC_W;
-        dsc.color = arc_color_at((p0 + p1) * 0.5f);   /* 用段中点的位置取色 */
-        dsc.opa = LV_OPA_COVER;
-        /* 只在整条弧的两个端头做圆头，中间段用方头，否则每个接缝都会鼓起一个圆点 */
-        dsc.rounded = (i == 0) || (p1 >= frac - 0.0001f);
-        dsc.start_angle = a_start + (int32_t)(ANG_SPAN * p0);
-        dsc.end_angle   = a_start + (int32_t)(ANG_SPAN * p1);
-
-        lv_draw_arc(layer, &dsc);
+        lv_draw_rect_dsc_t rd;
+        lv_draw_rect_dsc_init(&rd);
+        rd.bg_color = arc_color_at(frac);                /* 与烘焙值同一套插值 */
+        rd.bg_opa = LV_OPA_COVER;
+        rd.radius = LV_RADIUS_CIRCLE;
+        lv_area_t a = { px - r, py - r, px + r, py + r };
+        lv_draw_rect(layer, &rd, &a);
     }
 }
 
@@ -334,6 +346,10 @@ void ui_gauge_update(uint16_t rpm, int8_t coolant)
     if (s_first) {
         s_shown = target;
         s_first = false;
+        /* 背景图里烘焙的是**整条**彩环（100% 全亮）。首帧必须完整重绘一次，
+         * 否则 0 转时屏幕上会留着一整圈彩色，看起来像满油门。
+         * 注意不能靠 invalidate_sweep(0,0)——跨度太小时它是直接返回的。 */
+        s_need_full = true;
     } else {
         s_shown += (target - s_shown) * RPM_SMOOTH;
         if (fabsf(target - s_shown) < 6.0f) {
@@ -341,8 +357,13 @@ void ui_gauge_update(uint16_t rpm, int8_t coolant)
         }
     }
 
-    if (s_visible && fabsf(s_shown - prev) > 1.0f) {
-        invalidate_sweep(prev / (float)RPM_MAX, s_shown / (float)RPM_MAX);
+    if (s_visible) {
+        if (s_need_full) {
+            s_need_full = false;
+            invalidate_sweep(0.0f, 1.0f);
+        } else if (fabsf(s_shown - prev) > 1.0f) {
+            invalidate_sweep(prev / (float)RPM_MAX, s_shown / (float)RPM_MAX);
+        }
     }
 
     /* 2. 中心数字：只在显示值真的变化时才 set_text。

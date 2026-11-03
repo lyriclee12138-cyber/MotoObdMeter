@@ -32,8 +32,15 @@ ANG_START = -135.0          # 0 rpm 的角度（左下）
 ANG_SPAN = 270.0            # 扫过角度，总缺口 90° 在正下方
 RPM_MAX = 10000
 
-R_ARC = 194.0               # 进度弧中心半径
-ARC_W = 11.0                # 进度弧宽度
+# 进度环几何（必须与 ui_gauge.c 一致）：
+#   轨道 / 渐变环 / 运行时擦除弧 三者完全同一条带：r=194, w=11 → 183..194
+#   针尖圆直径 11，圆心在 r=188.5
+# 三者尺寸相同是刻意的：运行时擦除弧与烘焙的彩色环精确重合，擦除边界不会
+# 露出彩色描边；同时彩环也正好填满轨道，不会出现一截粗一截细。
+R_TRACK = 194.0
+TRACK_W = 11.0
+R_ARC = 194.0               # 渐变环外半径（PIL 的 arc 从 bbox 向内画）
+ARC_W = 11.0                # 渐变环宽度
 R_TICK_OUT = 219.0          # 刻度外端
 R_TICK_IN_MINOR = 207.0     # 小刻度内端
 R_TICK_IN_MAJOR = 203.0     # 主刻度内端（更长）
@@ -100,12 +107,33 @@ def render_bg(pal, path):
     img = Image.new('RGB', (W * SS, W * SS), pal['bg'])
     d = ImageDraw.Draw(img)
 
-    # 底弧：PIL 的 0° 在 3 点方向，我们的 0° 在 12 点，所以整体减 90
-    bbox = [(CX - R_ARC) * SS, (CY - R_ARC) * SS,
-            (CX + R_ARC) * SS, (CY + R_ARC) * SS]
+    # 轨道：PIL 的 0° 在 3 点方向，我们的 0° 在 12 点，所以整体减 90
+    tbox = [(CX - R_TRACK) * SS, (CY - R_TRACK) * SS,
+            (CX + R_TRACK) * SS, (CY + R_TRACK) * SS]
     p0 = ANG_START - 90.0
     p1 = ANG_START + ANG_SPAN - 90.0
-    d.arc(bbox, p0, p1, fill=pal['track'], width=int(ARC_W * SS))
+    d.arc(tbox, p0, p1, fill=pal['track'], width=int(TRACK_W * SS))
+
+    # 整条彩色环（0..10000 转全亮）烘焙进背景。
+    # 运行时不再"画颜色"，只把没到的部分用轨道底色盖掉 —— 这样每个角度
+    # 的颜色由像素本身决定，任何重绘时机错位都不可能把颜色放到错误的位置。
+    bbox = [(CX - R_ARC) * SS, (CY - R_ARC) * SS,
+            (CX + R_ARC) * SS, (CY + R_ARC) * SS]
+    steps = 270
+    for i in range(steps):
+        f0 = i / steps
+        f1 = (i + 1) / steps
+        d.arc(bbox,
+              ANG_START - 90.0 + ANG_SPAN * f0,
+              ANG_START - 90.0 + ANG_SPAN * f1,
+              fill=arc_color((f0 + f1) / 2.0),
+              width=int(ARC_W * SS))
+    # 起点圆头。终点不烘焙：全油门时由运行时的针尖圆补上，
+    # 否则半油门擦除时那个圆头会从 4:30 处露出来当成一个小色点。
+    rr = ARC_W / 2.0
+    ex, ey = polar(R_ARC - ARC_W / 2.0, ANG_START)
+    d.ellipse([(ex - rr) * SS, (ey - rr) * SS,
+               (ex + rr) * SS, (ey + rr) * SS], fill=arc_color(0.0))
 
     # 刻度
     for v in range(0, RPM_MAX + 1, 500):
@@ -140,16 +168,19 @@ def render_preview(pal, rpm, coolant, path, bg_path):
     frac = max(0.0, min(1.0, rpm / RPM_MAX))
     color = arc_color(frac)
 
-    # 进度弧
-    if frac > 0.001:
-        bbox = [(CX - R_ARC) * SS, (CY - R_ARC) * SS,
-                (CX + R_ARC) * SS, (CY + R_ARC) * SS]
-        p0 = ANG_START - 90.0
-        p1 = ANG_START + ANG_SPAN * frac - 90.0
-        d.arc(bbox, p0, p1, fill=color, width=int(ARC_W * SS))
+    # 预览要与固件一致：背景图里已经有一条完整的彩色环，
+    # 运行时做的是"把没到的部分用轨道底色擦掉"，而不是画彩色弧。
+    tbox = [(CX - R_TRACK) * SS, (CY - R_TRACK) * SS,
+            (CX + R_TRACK) * SS, (CY + R_TRACK) * SS]
+    if frac < 0.999:
+        d.arc(tbox,
+              ANG_START - 90.0 + ANG_SPAN * frac,
+              ANG_START - 90.0 + ANG_SPAN,
+              fill=pal['track'], width=int(TRACK_W * SS))
 
-        # 末端圆头，让弧线看起来像有个"针尖"
-        ex, ey = polar(R_ARC, ANG_START + ANG_SPAN * frac)
+    # 针尖圆头（对应固件里的 lv_draw_rect 圆）
+    if frac > 0.002:
+        ex, ey = polar(R_ARC - ARC_W / 2.0, ANG_START + ANG_SPAN * frac)
         rr = ARC_W / 2.0
         d.ellipse([(ex - rr) * SS, (ey - rr) * SS,
                    (ex + rr) * SS, (ey + rr) * SS], fill=color)
