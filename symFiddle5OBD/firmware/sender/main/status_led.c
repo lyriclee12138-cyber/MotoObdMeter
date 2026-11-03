@@ -96,8 +96,9 @@ static void breath(void)
     const uint32_t phase = now_ms() % BREATH_MS;
     uint32_t k = (phase < (BREATH_MS / 2)) ? (phase * 2) : ((BREATH_MS - phase) * 2);
     /* k: 0..BREATH_MS → 动画系数 20..255。
-     * 下限不能太低：这个值还要乘 LED_BRIGHT_PCT，8 在 50% 下只剩 4，肉眼几乎看不见。 */
-    const uint8_t scale = (uint8_t)(20u + (235u * k) / BREATH_MS);
+     * 下限不能太低：这个值还要乘 LED_BRIGHT_PCT。30 在 30% 下是 9，还能看出在呼吸；
+     * 早先的下限 8 乘 30% 只剩 2，呼吸就不成形了。 */
+    const uint8_t scale = (uint8_t)(30u + (225u * k) / BREATH_MS);
     led_rgb(C_NO_LINK_R, C_NO_LINK_G, C_NO_LINK_B, scale);
 }
 

@@ -54,6 +54,9 @@ static int8_t   s_last_clt = INT8_MAX;
 static float    s_shown;      /* 平滑后的转速，画弧用这个 */
 static bool     s_first = true;
 static bool     s_need_full = true;   /* 首帧要把整条彩环擦一遍（见 ui_gauge_update） */
+/* 屏幕上**实际画到**的位置（0..1）。注意它和 s_shown 不是一回事：
+ * 只有真正重绘过的位置才算数，否则脏区起点会漂移，见 ui_gauge_update 的注释。 */
+static float    s_painted;
 static bool     s_visible = true;
 
 /* ---------- 颜色 ---------- */
@@ -189,7 +192,11 @@ static void invalidate_sweep(float f0, float f1)
         f0 = f1;
         f1 = t;
     }
-    if (f1 - f0 < 0.0004f) {
+    /* 这里只挡"完全没变"（0.00002 ≈ 0.2 转）。
+     * 早先写的是 0.0004（4 转），慢速爬升时每帧只走 1.5 转，于是整段都被跳过、
+     * 屏幕上的弧停住不动；更糟的是 s_shown 继续前进，等下一次快速拉升时
+     * 重绘起点已经漂到前面，中间那一条永远没人画 —— 表现为弧上有一段断口。 */
+    if (f1 - f0 < 0.00002f) {
         return;
     }
 
@@ -258,6 +265,10 @@ void ui_gauge_apply_theme(void)
 void ui_gauge_set_visible(bool visible)
 {
     s_visible = visible;
+    if (visible) {
+        /* 隐藏期间 s_shown 一直在变，s_painted 已经过期，回来先整圈重画一次 */
+        s_need_full = true;
+    }
 }
 
 /* ---------- 创建 ---------- */
@@ -319,6 +330,8 @@ lv_obj_t *ui_gauge_create(lv_obj_t *parent)
     lv_obj_align(s_temp, LV_ALIGN_CENTER, 0, Y_TEMP - (int)CY);
 
     s_shown = 0.0f;
+    s_painted = 0.0f;
+    s_need_full = true;
     s_first = true;
     s_last_rpm = 0xFFFF;
     s_last_clt = INT8_MAX;
@@ -342,7 +355,6 @@ void ui_gauge_update(uint16_t rpm, int8_t coolant)
 
     /* 1. 弧：向目标平滑靠近，每帧只重绘扫过的一小段 */
     float target = (float)rpm;
-    float prev = s_shown;
     if (s_first) {
         s_shown = target;
         s_first = false;
@@ -358,11 +370,18 @@ void ui_gauge_update(uint16_t rpm, int8_t coolant)
     }
 
     if (s_visible) {
+        const float frac = s_shown / (float)RPM_MAX;
         if (s_need_full) {
             s_need_full = false;
             invalidate_sweep(0.0f, 1.0f);
-        } else if (fabsf(s_shown - prev) > 1.0f) {
-            invalidate_sweep(prev / (float)RPM_MAX, s_shown / (float)RPM_MAX);
+            s_painted = frac;
+        } else if (fabsf(frac - s_painted) > 0.00005f) {   /* ≈0.5 转 */
+            /* **必须从 s_painted 而不是 s_shown 的上一帧值开始失效**：
+             * 两者在"某帧变化太小、被跳过"之后会分开。若按上一帧值算，
+             * 起点会一路漂移，漂过的这一段屏幕上从没画过（露出轨道），
+             * 下一段快速变化也不会补它 —— 弧上的断口就是这么来的。 */
+            invalidate_sweep(s_painted, frac);
+            s_painted = frac;
         }
     }
 

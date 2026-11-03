@@ -128,12 +128,11 @@ def render_bg(pal, path):
               ANG_START - 90.0 + ANG_SPAN * f1,
               fill=arc_color((f0 + f1) / 2.0),
               width=int(ARC_W * SS))
-    # 起点圆头。终点不烘焙：全油门时由运行时的针尖圆补上，
-    # 否则半油门擦除时那个圆头会从 4:30 处露出来当成一个小色点。
-    rr = ARC_W / 2.0
-    ex, ey = polar(R_ARC - ARC_W / 2.0, ANG_START)
-    d.ellipse([(ex - rr) * SS, (ey - rr) * SS,
-               (ex + rr) * SS, (ey + rr) * SS], fill=arc_color(0.0))
+    # 两端都**不烘焙圆头**：
+    #   终点——全油门时由运行时针尖圆补上；烘焙了会在半油门擦除时露个小色点。
+    #   起点——运行时擦除弧从 -135° 起画，圆头会探出去一点擦不到，
+    #         0 转时就在刻度 0 处留一个绿色小点（用户报过）。平口与轨道一致，
+    #         看起来也正常。
 
     # 刻度
     for v in range(0, RPM_MAX + 1, 500):
