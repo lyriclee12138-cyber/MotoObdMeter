@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         "main.c"
         "can_link.c"
+        "can_diag.c"
         "isotp.c"
         "decode.c"
         "obd_poll.c"

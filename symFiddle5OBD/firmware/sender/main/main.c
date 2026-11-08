@@ -17,8 +17,15 @@
 #include "odo.h"
 #include "app_power.h"
 #include "version.h"
+#include "can_diag.h"
 
 static const char *TAG = "main";
+
+/* 诊断固件开关。
+ * 1 = 只跑 CAN 物理层诊断、把结果打到串口，不启动正常业务（ESP-NOW / OBD 都不跑）。
+ * 排查完改回 0 重新出包，就是正常固件。
+ * 诊断本身用 LISTEN_ONLY，不向总线发任何东西，插在车上安全。 */
+#define CAN_DIAG_MODE  1
 
 #define UPLINK_PERIOD_MS 100u   /* 10 Hz 上行。ESP-NOW 上限远高于此，
                                  * 但 10Hz 对仪表已经足够，还能省电 */
@@ -141,6 +148,13 @@ static bool sim_tick(void)
 
 void app_main(void)
 {
+#if CAN_DIAG_MODE
+    /* 诊断模式：不初始化 LVGL / ESP-NOW / OBD，只测 CAN 物理层 */
+    while (1) {
+        can_diag_run();
+    }
+#endif
+
 #if SENDER_MINIMAL_BOOT
     ESP_LOGI(TAG, ">>> 最小启动测试：app_main 已执行 <<<");
     while (1) {
