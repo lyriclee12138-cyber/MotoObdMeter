@@ -23,9 +23,14 @@ static const char *TAG = "main";
 
 /* 诊断固件开关。
  * 1 = 只跑 CAN 物理层诊断、把结果打到串口，不启动正常业务（ESP-NOW / OBD 都不跑）。
- * 排查完改回 0 重新出包，就是正常固件。
- * 诊断本身用 LISTEN_ONLY，不向总线发任何东西，插在车上安全。 */
-#define CAN_DIAG_MODE  1
+ * 0 = 正常固件（默认）。
+ *
+ * 注意：诊断模式不是纯只收不发——其中两项判据会往总线发帧
+ * （ID 0x6A5，不在 OBD 诊断 ID 范围内，不会触发 ECU 回应）。
+ *
+ * 2026-11-08 用它定位到「CANH/CANL 接反」（症状和"线没接"一模一样）。
+ * 代码留着：下次车上有 CAN 问题，把这里改回 1 重出包即可，不用重写。 */
+#define CAN_DIAG_MODE  0
 
 #define UPLINK_PERIOD_MS 100u   /* 10 Hz 上行。ESP-NOW 上限远高于此，
                                  * 但 10Hz 对仪表已经足够，还能省电 */
