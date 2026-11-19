@@ -99,6 +99,34 @@ ACC 取电 ──> 降压到 5V/3.3V ──> ESP32-S3 + CAN 收发器 ──> OB
 
 ---
 
+## 可扩展性
+
+虽然本项目是给飞度 5 定制的，但架构上是**通用的 OBD 数据采集 + 无线显示**，扩展空间很大：
+
+- **不止摩托车，汽车也能用**：OBD-II 是一套标准化体系，乘用车同样走 OBD-II（多为 500k CAN），
+  这套「CAN 收发 → ISO-TP → PID 解析 → 无线投屏」的链路在汽车上同样适用，
+  只需按目标车型确认波特率与物理接线（K-Line 车则需换收发器，见上文「适用车型与兼容性」）。
+- **数据不止转速和水温**：转速（PID `0x0C`）与水温（PID `0x05`）只是当前展示的两个。
+  OBD 还有大量标准 PID——**只要知道对应 PID，就能读到**车速（`0x0D`）、节气门开度（`0x11`）、
+  进气温度（`0x0F`）、燃油压力等，改一下 `firmware/sender/main/decode.c` 的轮询与解析即可。
+- **圆屏界面可升级**：接收端界面（`firmware/receiver`）可按「想显示的数据数量与类型」进一步扩展——
+  加数据卡片、加第二块表盘、改多页轮播都行；核心是把 `telemetry.h` 的数据契约扩一扩，
+  其余复用现有的 ESP-NOW + LVGL 渲染链路。
+
+---
+
+## 实拍照片
+
+| OBD 诊断接口（座桶内） | 硬件原型（发送端 + CAN 收发器） |
+|---|---|
+| ![](src/docs/images/obd-port.jpg) | ![](src/docs/images/hardware-prototype.jpg) |
+
+| 装车 · 座桶内发送端 | 装车 · 车把圆屏显示真实数据 |
+|---|---|
+| ![](src/docs/images/sender-install.jpg) | ![](src/docs/images/on-vehicle-display.jpg) |
+
+---
+
 ## 页面展示
 
 圆屏仪表在不同状态下的实际画面（由固件同源素材烘焙渲染，与真机显示一致）：
@@ -160,7 +188,7 @@ cd src
 src/
 ├── CHANGELOG.md               版本记录
 ├── docs/                      文档（需求 / 开发 / 供电 / 接线 / 界面）
-│   └── images/                页面图
+│   └── images/                界面渲染图 + 实拍照片
 ├── firmware/
 │   ├── common_components/shared/   telemetry.h（23 字节数据契约）、heartbeat.h
 │   ├── sender/                发送端（ESP-IDF：CAN / ISO-TP / OBD / ESP-NOW）
