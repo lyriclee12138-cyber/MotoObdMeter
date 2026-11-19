@@ -1,6 +1,6 @@
-# SYM Fiddle 5 · OBD 圆屏仪表
+# OBD 圆屏仪表
 
-> 给三阳飞度 5 踏板车加一块圆屏电子仪表：从 OBD-II 读取 ECU 的转速与水温，经 ESP-NOW 无线投到车把上的 466×466 圆屏，实时显示。
+> 给摩托车加一块圆屏电子仪表：从 OBD-II 读取 ECU 的转速与水温，经 ESP-NOW 无线投到车把上的 466×466 圆屏，实时显示。
 
 ![version](https://img.shields.io/badge/version-v0.2--beta-3ddc97)
 ![platform](https://img.shields.io/badge/platform-ESP32--S3-5aa9f5)
@@ -9,7 +9,7 @@
 ![license](https://img.shields.io/badge/license-GPL--3.0-orange)
 
 <p align="center">
-  <img src="src/docs/images/dashboard-overview.png" alt="圆屏仪表页面图" width="520">
+  <img src="src/docs/images/on-vehicle-display.jpg" alt="装车实测：车把圆屏显示真实转速与水温" width="460">
 </p>
 
 ---
@@ -130,6 +130,10 @@ ACC 取电 ──> 降压到 5V/3.3V ──> ESP32-S3 + CAN 收发器 ──> OB
 ## 页面展示
 
 圆屏仪表在不同状态下的实际画面（由固件同源素材烘焙渲染，与真机显示一致）：
+
+<p align="center">
+  <img src="src/docs/images/dashboard-overview.png" alt="圆屏仪表状态概览" width="520">
+</p>
 
 | 日间 · 巡航 | 夜间 · 巡航 | 夜间 · 怠速 | 夜间 · 高温 |
 |---|---|---|---|
