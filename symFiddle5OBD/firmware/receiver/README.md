@@ -2,7 +2,8 @@
 
 微雪 **ESP32-S3-Touch-AMOLED-1.75C**（466×466 CO5300 QSPI + CST9217 触摸 + AXP2101）。
 
-当前阶段：**假数据 + 界面已跑通**，还没接 ESP-NOW。发送端硬件到货后再把 `fake_source` 换成无线接收。
+当前阶段：**实车跑通（v0.2-beta）**。ESP-NOW 下行已接入，圆屏显示真实转速与水温；
+`fake_source` 保留为「演示模式」的本地数据源，无车时也能跑通整条链路。
 
 ---
 
@@ -47,7 +48,7 @@ cp build/assets/gauge_assets.[ch] firmware/receiver/main/assets/
 
 ```
 main/
-  main.c          启动 BSP、建界面、30fps 循环喂假数据
+  main.c          启动 BSP、建界面、30fps 循环喂数据（真实 / 演示）
   ui_gauge.c      图层创建与刷新（旋转指针、染色、温度文字）
   fake_source.c   20 秒循环的骑行曲线，覆盖绿/黄/橙/红四段和水温三色
   assets/         gauge_assets.c/h（4 MB 源码，编译要一会儿）
@@ -119,11 +120,11 @@ PSRAM 8 MB 走 OCT 80 MHz，LVGL 的绘制缓冲放在 PSRAM。
 
 ---
 
-## 六、下一阶段
+## 六、下一阶段（已完成，v0.1-alpha 起）
 
-- 接收端加 ESP-NOW（`esp_now_init` + 接收回调），把 `fake_source_get()` 换成 `telemetry_t` 解析
-- 断连时界面显示 `--`（`ui_gauge_update` 已经支持 `INT8_MIN` 表示无效）
-- 发送端把 `telemetry_t` 按 23 字节发出来
+- ✅ 接收端加 ESP-NOW（`esp_now_init` + 接收回调），`fake_source_get()` 在演示模式下使用，真实数据走 `telemetry_t` 解析
+- ✅ 断连时界面显示 `--`（`ui_gauge_update` 用 `INT8_MIN` 表示无效）
+- ✅ 发送端把 `telemetry_t` 按 23 字节发出来
 
 ---
 

@@ -1,7 +1,7 @@
 # 开发文档
 
 > 项目：SYM Fiddle 5 踏板车用的圆屏仪表（CAN/OBD → ESP-NOW → 圆屏）
-> 当前版本：**v0.1-alpha**（收发两端上机验证通过，待实车测试）
+> 当前版本：**v0.2-beta**（实车 OBD 数据跑通，圆屏显示真实转速与水温）
 > 这份文档是唯一入口。变更历史看 `CHANGELOG.md`，供电方案看 `docs/power-plan.md`（手机版在 `docs/wiring/index.html` 的「供电方案」页签）。
 
 ---
