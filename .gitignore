@@ -19,3 +19,7 @@ snapshots/
 Thumbs.db
 desktop.ini
 *.wbapp_*.genie
+
+# 社交平台发布素材与本地临时生成脚本，不入库
+小红书发布素材/
+gen_rednote_assets.py
