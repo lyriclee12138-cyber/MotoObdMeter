@@ -7,7 +7,7 @@
 # 依赖: tools/win/idf.bat（ESP-IDF 环境）、tools/win/log.py（读串口）
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
-ROOT=$(cd "$HERE/../.." && pwd)          # 项目根 symFiddle5OBD/
+ROOT=$(cd "$HERE/../.." && pwd)          # 项目根 src/
 RECV="$ROOT/firmware/receiver"
 IDF="$HERE/idf.bat"
 PY=/c/Espressif/tools/python/v5.5.5/venv/Scripts/python.exe

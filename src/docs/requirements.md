@@ -10,7 +10,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 项目代号 | symFiddle5OBD |
+| 项目代号 | MotoObdMeter |
 | 文档类型 | 软件需求规格说明（SRS） |
 | 读者 | 开发者、维护者、评测者 |
 | 关联文档 | `docs/dev-guide.md`（开发）、`docs/power-plan.md`（供电）、`docs/sender-wiring.md`（接线）、`CHANGELOG.md`（变更） |

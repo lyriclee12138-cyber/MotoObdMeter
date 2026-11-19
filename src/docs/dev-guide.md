@@ -34,7 +34,7 @@
 ## 2. 目录结构
 
 ```
-symFiddle5OBD/
+src/
 ├── CHANGELOG.md               版本记录（用户能看见的变化 + 结构性坑）
 ├── docs/
 │   ├── power-plan.md          装车供电方案
@@ -79,7 +79,7 @@ symFiddle5OBD/
 ### 4.1 一条命令出包
 
 ```bash
-cd symFiddle5OBD
+cd src
 ./tools/win/pack_firmware.sh            # 两端都出
 ./tools/win/pack_firmware.sh receiver    # 只出圆屏（更快）
 ./tools/win/pack_firmware.sh sender      # 只出发送端

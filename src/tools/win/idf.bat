@@ -1,5 +1,5 @@
 @echo off
-REM symFiddle5OBD - ESP-IDF 5.5.5 wrapper (Windows / LEE-HOME). ASCII only on purpose:
+REM MotoObdMeter - ESP-IDF 5.5.5 wrapper (Windows / LEE-HOME). ASCII only on purpose:
 REM cmd.exe reads this file as GBK, so non-ASCII comments would corrupt parsing.
 REM Usage: idf.bat <idf.py args>   e.g.  idf.bat -B build build
 setlocal

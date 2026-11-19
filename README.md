@@ -9,7 +9,7 @@
 ![license](https://img.shields.io/badge/license-GPL--3.0-orange)
 
 <p align="center">
-  <img src="symFiddle5OBD/docs/images/dashboard-overview.png" alt="圆屏仪表页面图" width="520">
+  <img src="src/docs/images/dashboard-overview.png" alt="圆屏仪表页面图" width="520">
 </p>
 
 ---
@@ -27,6 +27,19 @@
 - **接收端**（车把）：圆屏显示「转速弧 + 大数字 + 水温」，另含设置页与日/夜双主题。
 
 实车已跑通：接入 OBD 后，圆屏显示与 ELM327 一致的转速、水温（2026-11-08，v0.2-beta）。
+
+---
+
+## 适用车型与兼容性
+
+本项目基于 **SYM Fiddle 5（三阳飞度 5）** 实测开发，该车诊断口为 16 针 OBD-II，
+协议为 **ISO 15765-4 CAN（11 bit，500 kbaud）**。
+
+> ⚠️ **注意**：本项目的 CAN 链路**只针对飞度 5 的 CAN 协议验证过，未测试 K-Line**。
+> 国四（Euro 4）车型的诊断协议并不统一——部分车型走 CAN，部分走 K-Line。
+> 如果你的车是 **K-Line** 而非 CAN，物理层与协议栈需要**自行适配**：
+> 本项目用的是 SN65HVD230 CAN 收发器，K-Line 需换成 L9637D 等 K 线收发器，
+> 协议也要从 ISO 15765-4 换成 ISO 14230 / KWP2000。**接车前请先确认自己车的诊断协议。**
 
 ---
 
@@ -55,7 +68,7 @@
 | OBD 接头 | 16 针公头带尾线 | 车载接口 |
 | 供电 | 9–36V→5V 降压 + 保险丝 + SMBJ18A | 装车供电 |
 
-> ⚠️ CAN 收发器只能接 3.3V，接 5V 会烧毁。完整接线表见 [`docs/sender-wiring.md`](symFiddle5OBD/docs/sender-wiring.md)。
+> ⚠️ CAN 收发器只能接 3.3V，接 5V 会烧毁。完整接线表见 [`docs/sender-wiring.md`](src/docs/sender-wiring.md)。
 
 ---
 
@@ -82,7 +95,7 @@ ACC 取电 ──> 降压到 5V/3.3V ──> ESP32-S3 + CAN 收发器 ──> OB
 - 接收端的圆屏 / 触摸方案也可按需替换，核心在于无线链路与数据契约（`telemetry.h`）保持兼容。
 
 **如果你懂硬件、PCB 设计或降成本选型，欢迎接手集成工作** —— 直接提 Issue / PR 即可。
-数据契约与协议细节见 [`docs/dev-guide.md`](symFiddle5OBD/docs/dev-guide.md) 第 5 节。
+数据契约与协议细节见 [`docs/dev-guide.md`](src/docs/dev-guide.md) 第 5 节。
 
 ---
 
@@ -92,9 +105,9 @@ ACC 取电 ──> 降压到 5V/3.3V ──> ESP32-S3 + CAN 收发器 ──> OB
 
 | 日间 · 巡航 | 夜间 · 巡航 | 夜间 · 怠速 | 夜间 · 高温 |
 |---|---|---|---|
-| ![](symFiddle5OBD/docs/images/dashboard-day-cruise.png) | ![](symFiddle5OBD/docs/images/dashboard-night-cruise.png) | ![](symFiddle5OBD/docs/images/dashboard-night-idle.png) | ![](symFiddle5OBD/docs/images/dashboard-night-hot.png) |
+| ![](src/docs/images/dashboard-day-cruise.png) | ![](src/docs/images/dashboard-night-cruise.png) | ![](src/docs/images/dashboard-night-idle.png) | ![](src/docs/images/dashboard-night-hot.png) |
 
-更多状态图见 [`docs/images/`](symFiddle5OBD/docs/images/)。
+更多状态图见 [`docs/images/`](src/docs/images/)。
 
 ---
 
@@ -108,7 +121,7 @@ ACC 取电 ──> 降压到 5V/3.3V ──> ESP32-S3 + CAN 收发器 ──> OB
 ### 出包（最常用）
 
 ```bash
-cd symFiddle5OBD
+cd src
 ./tools/win/pack_firmware.sh receiver   # 只出圆屏
 ./tools/win/pack_firmware.sh sender     # 只出发送端
 ./tools/win/pack_firmware.sh            # 两端都出
@@ -123,7 +136,7 @@ cd symFiddle5OBD
 | 接收端 | **32MB** | DIO | 80MHz |
 | 发送端 | **16MB** | DIO | 80MHz |
 
-> 详细的构建 / 出包 / 烧录 / 版本号机制见 [`docs/dev-guide.md`](symFiddle5OBD/docs/dev-guide.md)。
+> 详细的构建 / 出包 / 烧录 / 版本号机制见 [`docs/dev-guide.md`](src/docs/dev-guide.md)。
 
 ---
 
@@ -131,20 +144,20 @@ cd symFiddle5OBD
 
 | 文档 | 说明 |
 |---|---|
-| [`docs/requirements.md`](symFiddle5OBD/docs/requirements.md) | 📋 **需求文档**（功能/非功能/硬件/界面需求 + 验收标准） |
-| [`docs/dev-guide.md`](symFiddle5OBD/docs/dev-guide.md) | 🛠️ **开发文档**（架构、构建、约定、坑清单、速查） |
-| [`docs/power-plan.md`](symFiddle5OBD/docs/power-plan.md) | 🔌 装车供电方案 |
-| [`docs/sender-wiring.md`](symFiddle5OBD/docs/sender-wiring.md) | 🔧 接线表与联调指南 |
-| [`docs/可行性分析报告.html`](symFiddle5OBD/docs/可行性分析报告.html) | 🔬 技术可行性论证 |
-| [`docs/UI规格-beta.html`](symFiddle5OBD/docs/UI规格-beta.html) | 🎨 界面规格锁定表 |
-| [`CHANGELOG.md`](symFiddle5OBD/CHANGELOG.md) | 📝 版本变更记录 |
+| [`docs/requirements.md`](src/docs/requirements.md) | 📋 **需求文档**（功能/非功能/硬件/界面需求 + 验收标准） |
+| [`docs/dev-guide.md`](src/docs/dev-guide.md) | 🛠️ **开发文档**（架构、构建、约定、坑清单、速查） |
+| [`docs/power-plan.md`](src/docs/power-plan.md) | 🔌 装车供电方案 |
+| [`docs/sender-wiring.md`](src/docs/sender-wiring.md) | 🔧 接线表与联调指南 |
+| [`docs/可行性分析报告.html`](src/docs/可行性分析报告.html) | 🔬 技术可行性论证 |
+| [`docs/UI规格-beta.html`](src/docs/UI规格-beta.html) | 🎨 界面规格锁定表 |
+| [`CHANGELOG.md`](src/CHANGELOG.md) | 📝 版本变更记录 |
 
 ---
 
 ## 目录结构
 
 ```
-symFiddle5OBD/
+src/
 ├── CHANGELOG.md               版本记录
 ├── docs/                      文档（需求 / 开发 / 供电 / 接线 / 界面）
 │   └── images/                页面图
@@ -166,7 +179,7 @@ symFiddle5OBD/
 - **v0.2-beta**（2026-11-08）— 实车跑通，圆屏显示真实转速与水温
 - **v0.1-alpha**（2026-11-03）— 收发两端打通，可装车测试
 
-详见 [`CHANGELOG.md`](symFiddle5OBD/CHANGELOG.md)。
+详见 [`CHANGELOG.md`](src/CHANGELOG.md)。
 
 ---
 
